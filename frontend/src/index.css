@@ -213,3 +213,11 @@ code, .mono {
         display: contents !important;
     }
 }
+
+/* Hide Emergent badge */
+#emergent-badge,
+a[href*="emergent.sh"][style*="position: fixed"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
