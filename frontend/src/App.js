@@ -13,6 +13,7 @@ import Users from "@/pages/Users";
 import UserForm from "@/pages/UserForm";
 import ActivityLogs from "@/pages/ActivityLogs";
 import Profile from "@/pages/Profile";
+import Reports from "@/pages/Reports";
 
 // Protected Route Component
 function ProtectedRoute({ children, requiredRoles = [] }) {
@@ -98,6 +99,12 @@ function AppRoutes() {
       <Route path="/casos/:id/editar" element={
         <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica']}>
           <CaseForm />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/relatorios" element={
+        <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica']}>
+          <Reports />
         </ProtectedRoute>
       } />
       

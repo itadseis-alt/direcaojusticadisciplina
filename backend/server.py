@@ -19,6 +19,7 @@ import jwt
 import requests
 import asyncio
 import io
+import resend
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -27,6 +28,11 @@ db = client[os.environ['DB_NAME']]
 
 # JWT Config
 JWT_ALGORITHM = "HS256"
+
+# Email Config
+resend.api_key = os.environ.get("RESEND_API_KEY", "")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "noreply@falintil.tl")
+EMAIL_ENABLED = bool(resend.api_key)
 
 def get_jwt_secret() -> str:
     return os.environ["JWT_SECRET"]
@@ -205,6 +211,87 @@ async def log_activity(user_id: str, user_nome: str, acao: str, detalhes: str = 
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
     await db.activity_logs.insert_one(log_entry)
+
+# Email notification helper
+async def send_status_notification(case_numero: str, case_refere_ao: str, new_status: str, old_status: str = None):
+    """Send email notification when case status changes"""
+    if not EMAIL_ENABLED:
+        logger.info("Email notifications disabled (no API key)")
+        return
+    
+    status_labels = {
+        'pendente': 'Pendente',
+        'em_processo': 'Em Processo',
+        'processado': 'Processado',
+        'arquivado': 'Arquivado',
+        'anulado': 'Anulado'
+    }
+    
+    try:
+        # Get all admin users to notify
+        admins = await db.users.find(
+            {"tipo": {"$in": ["super_admin", "admin"]}},
+            {"_id": 0, "email": 1, "nome": 1}
+        ).to_list(100)
+        
+        if not admins:
+            return
+        
+        subject = f"[F-FDTL] Caso {case_numero} - Status alterado para {status_labels.get(new_status, new_status)}"
+        
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1a1a2e; padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0;">FALINTIL-FDTL</h1>
+                <p style="color: #ccc; margin: 5px 0;">Direção Justiça e Disciplina</p>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+                <h2 style="color: #333;">Atualização de Caso Disciplinar</h2>
+                <p>O status do caso foi atualizado:</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd; background: #fff;"><strong>Número do Caso:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #ddd; background: #fff;">{case_numero}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd; background: #fff;"><strong>Refere a:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #ddd; background: #fff;">{case_refere_ao}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd; background: #fff;"><strong>Novo Status:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #ddd; background: #fff;">
+                            <span style="background: {'#166534' if new_status == 'processado' else '#9A3412' if new_status == 'pendente' else '#1E40AF' if new_status == 'em_processo' else '#3F3F46'}; color: white; padding: 4px 8px; font-size: 12px;">
+                                {status_labels.get(new_status, new_status).upper()}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                <p style="color: #666; font-size: 14px;">
+                    Acesse o sistema para mais detalhes.
+                </p>
+            </div>
+            <div style="background: #333; padding: 15px; text-align: center;">
+                <p style="color: #999; margin: 0; font-size: 12px;">
+                    F-FDTL: Divisão de Comunicações e Sistema de Informação @2026
+                </p>
+            </div>
+        </div>
+        """
+        
+        for admin in admins:
+            try:
+                resend.Emails.send({
+                    "from": EMAIL_FROM,
+                    "to": admin["email"],
+                    "subject": subject,
+                    "html": html_content
+                })
+                logger.info(f"Email sent to {admin['email']} for case {case_numero}")
+            except Exception as e:
+                logger.error(f"Failed to send email to {admin['email']}: {e}")
+                
+    except Exception as e:
+        logger.error(f"Email notification error: {e}")
 
 # Auth Routes
 @api_router.post("/auth/login")
@@ -488,7 +575,8 @@ async def update_case_status(case_id: str, status_data: StatusUpdate, request: R
     await log_activity(current_user["id"], current_user["nome"], "UPDATE_STATUS", f"Caso {case['numero']} - status: {status_data.status}")
     
     # Send notification email (async, non-blocking)
-    # TODO: Implement email notification
+    old_status = case.get("status")
+    asyncio.create_task(send_status_notification(case["numero"], case["refere_ao"], status_data.status, old_status))
     
     return {"message": "Status atualizado"}
 
@@ -513,6 +601,10 @@ async def process_case(case_id: str, process_data: CaseProcess, request: Request
     
     await db.cases.update_one({"id": case_id}, {"$set": update_data})
     await log_activity(current_user["id"], current_user["nome"], "PROCESS_CASE", f"Caso {case['numero']} processado - sanção: {process_data.tipo_sancao}")
+    
+    # Send notification email
+    old_status = case.get("status")
+    asyncio.create_task(send_status_notification(case["numero"], case["refere_ao"], "processado", old_status))
     
     return {"message": "Caso processado"}
 
