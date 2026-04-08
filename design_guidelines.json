@@ -1,0 +1,141 @@
+{
+  "theme": "light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "design_philosophy": "Authority, Clarity, Truth. A dense, high-performance 'Control Room' interface designed for military justice administration. It uses a strict grid hierarchy, pure HTML/Tailwind structures mixed with highly customized Shadcn components for forms. Zero unnecessary decoration; color is used strictly to encode status and guide action.",
+  "colors": {
+    "background": {
+      "primary": "#FAFAFA",
+      "secondary": "#FFFFFF",
+      "tertiary": "#F4F4F5"
+    },
+    "text": {
+      "primary": "#09090B",
+      "secondary": "#52525B",
+      "muted": "#A1A1AA"
+    },
+    "brand": {
+      "primary": "#09090B",
+      "primary_hover": "#27272A",
+      "accent": "#000000"
+    },
+    "status": {
+      "processado": "#166534",
+      "processado_bg": "#DCFCE7",
+      "arquivado": "#3F3F46",
+      "arquivado_bg": "#F4F4F5",
+      "pendente": "#9A3412",
+      "pendente_bg": "#FFEDD5",
+      "anulado": "#991B1B",
+      "anulado_bg": "#FEE2E2",
+      "em_processo": "#1E40AF",
+      "em_processo_bg": "#DBEAFE"
+    },
+    "border": {
+      "default": "#E4E4E7",
+      "focus": "#09090B"
+    }
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Chivo",
+      "body": "IBM Plex Sans",
+      "mono": "IBM Plex Mono"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter text-[#09090B]",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight text-[#09090B]",
+      "h3": "text-xl sm:text-2xl font-semibold tracking-tight text-[#09090B]",
+      "h4": "text-lg font-bold tracking-tight text-[#09090B]",
+      "body": "text-sm md:text-base font-normal leading-relaxed text-[#52525B]",
+      "mono_label": "text-xs font-mono uppercase tracking-[0.2em] font-semibold text-[#52525B]"
+    }
+  },
+  "layout_and_spacing": {
+    "container_padding": "p-6 md:p-8",
+    "section_gap": "gap-8 md:gap-12",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6",
+    "bento_spans": {
+      "summary": "col-span-1",
+      "chart": "col-span-1 md:col-span-2 row-span-2",
+      "feed": "col-span-1 md:col-span-2 row-span-2"
+    },
+    "card_style": "bg-white border border-zinc-200 rounded-none shadow-none",
+    "surface_strategy": "Grid Borders (Technical Look). Expose the skeleton. Containers should use border-collapse style layout where applicable. No shadows, just hard 1px borders.",
+    "border_radius": "rounded-none",
+    "optical_alignment": "Forms and data tables should strictly left-align text to optimize reading flow."
+  },
+  "motion_and_interactions": {
+    "hover_states": "hover:bg-zinc-100 transition-colors duration-200 ease-in-out",
+    "button_hover": "hover:bg-zinc-800 hover:text-white transition-all duration-200",
+    "focus_states": "focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2",
+    "transitions": "transition-all duration-200 ease-in-out",
+    "animations": {
+      "page_enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    }
+  },
+  "components": {
+    "button": {
+      "primary": "bg-zinc-900 text-white font-medium rounded-none px-6 py-2 border border-transparent hover:bg-zinc-800 transition-colors",
+      "secondary": "bg-white text-zinc-900 font-medium rounded-none px-6 py-2 border border-zinc-200 hover:bg-zinc-50 transition-colors",
+      "danger": "bg-red-600 text-white font-medium rounded-none px-6 py-2 hover:bg-red-700 transition-colors"
+    },
+    "input": "bg-transparent border border-zinc-200 rounded-none px-4 py-2 text-zinc-900 placeholder:text-zinc-500 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all",
+    "table": "w-full text-sm text-left border-collapse border border-zinc-200",
+    "table_header": "bg-zinc-50 text-xs font-mono uppercase tracking-wider text-zinc-500 border-b border-zinc-200 p-4",
+    "table_cell": "p-4 border-b border-zinc-200 text-zinc-900",
+    "badge": "inline-flex items-center px-2 py-0.5 text-xs font-bold uppercase tracking-wider border rounded-none"
+  },
+  "icons": {
+    "library": "lucide-react",
+    "instructions": "Use Lucide React icons with stroke-width 1.5 or 2 depending on the scale. Ensure semantic sizing (e.g., w-4 h-4 for inline text, w-6 h-6 for standalone buttons)."
+  },
+  "media": {
+    "images": [
+      {
+        "category": "login_background",
+        "url": "https://images.pexels.com/photos/29770731/pexels-photo-29770731.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=1024&w=1024",
+        "description": "Abstract view of a white geometric building facade with grid pattern design. Use as the background texture for the login page, heavily washed out with a white overlay (e.g., bg-white/90 backdrop-blur-md) to ensure the login form is prominent."
+      },
+      {
+        "category": "placeholder_avatar",
+        "url": "https://images.unsplash.com/photo-1575330729051-8bc61d985c61?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHdoaXRlJTIwYXJjaGl0ZWN0dXJlJTIwdGV4dHVyZXxlbnwwfHx8fDE3NzU2MDgxNDR8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Fallback texture for user profile or member photos if no photo is available. Apply grayscale and high contrast filters."
+      }
+    ]
+  },
+  "key_features_and_pages": {
+    "login": {
+      "layout": "Split screen or solid brutalist card centered. Left side: High impact typography 'FALINTIL-FDTL', mono labels. Right side: Login form with strict grid borders.",
+      "testid": "login-page-container"
+    },
+    "dashboard": {
+      "layout": "Sidebar navigation (left) with top header. Content area uses tight 'Control Room' bento grid for stats (Total, Processados, Arquivados, Pendentes, Em Processo, Anulados).",
+      "visuals": "Use dense charts (recharts) for gender/case type breakdowns. High contrast numbers.",
+      "testid": "dashboard-view"
+    },
+    "case_registration_form": {
+      "layout": "Multi-column grid (grid-cols-1 md:grid-cols-2 lg:grid-cols-3) using grid borders. Group inputs logically (Data, Person, Case Details).",
+      "components": "Shadcn form, Input, Select, DatePicker (Calendar), File input for PDF, Image upload for Foto.",
+      "testid": "case-registration-form"
+    },
+    "case_list": {
+      "layout": "Data-heavy table view. High density. Filters at the top (Status, Unidade). Badges for status.",
+      "testid": "case-list-view"
+    },
+    "case_details": {
+      "layout": "Document-style view. Like reading an official military brief. Serif font could be used for the case description text if lengthy, but stick to IBM Plex Sans. Include actions (Print, Edit Status).",
+      "testid": "case-details-view"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the 'Swiss & High-Contrast' archetype. Do NOT use gradients, rounded corners > 2px, or soft drop shadows.",
+    "All cards, inputs, and buttons must be completely flat with 1px solid borders (rounded-none or max rounded-sm).",
+    "Install and use 'lucide-react' for all icons.",
+    "Use standard HTML/Tailwind for structural layouts to create the 'Technical Grid' look, and wrap Shadcn components inside them.",
+    "Ensure all interactive elements and forms have descriptive `data-testid` attributes (e.g., `data-testid='login-submit-button'`, `data-testid='case-filter-status'`).",
+    "For the statistics dashboard, use Shadcn Charts or Recharts with the strict color palette defined above.",
+    "Ensure the application strictly handles 4 user roles visually (hide/disable edit buttons for 'Pessoal Superior (somente leitura)').",
+    "The login page MUST use the login_background image provided, layered with a heavy white/zinc overlay (e.g. bg-white/80 backdrop-blur) to create a premium, authoritative entry point.",
+    "Use 'Chivo' (or similar sturdy sans-serif like standard 'Inter' customized) for headings and 'IBM Plex Sans' for body text. Enforce uppercase 'IBM Plex Mono' for overlines, labels, and table headers to sell the military/technical aesthetic."
+  ]
+}
