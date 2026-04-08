@@ -19,11 +19,11 @@ Criar um sistema de Gestão Disciplinar completo baseado no documento PDF fornec
 - Upload de arquivos (fotos, PDFs, despachos)
 - Log de atividades
 - Exportação para CSV/Excel
-- Impressão de documentos
+- Impressão de documentos em A4
 
-## What's Been Implemented (2026-04-08)
+## What's Been Implemented
 
-### Backend (FastAPI + MongoDB)
+### 2026-04-08 (Initial Release)
 - [x] Autenticação JWT com bcrypt
 - [x] CRUD de usuários com permissões por role
 - [x] CRUD de casos disciplinares
@@ -33,55 +33,22 @@ Criar um sistema de Gestão Disciplinar completo baseado no documento PDF fornec
 - [x] Exportação CSV/Excel
 - [x] Seed de dados demo (15 casos, 4 usuários)
 
-### Frontend (React + Shadcn UI)
-- [x] Login page com design Swiss/High-Contrast
-- [x] Dashboard com gráficos (Recharts)
-- [x] Lista de casos com filtros e paginação
-- [x] Formulário de registro de caso
-- [x] Visualização detalhada de caso
-- [x] Processamento de caso com sanções
-- [x] Alteração de status com upload de despacho
-- [x] Gestão de usuários
-- [x] Página de logs de atividade
-- [x] Perfil do usuário com alteração de senha
-- [x] Controle de acesso por role no frontend
+### 2026-04-08 (Update 1)
+- [x] Posto atualizado com hierarquia militar completa:
+  - Oficiais Generais (General, Almirante, etc.)
+  - Oficiais Superiores (Coronel, Major, etc.)
+  - Oficiais Capitães e Subalternos
+  - Sargentos
+  - Praças
+- [x] Componente/Unidade atualizado com 15 unidades F-FDTL
+- [x] Campo "Telefone do Requerente" adicionado ao formulário
+- [x] Campo "Anexar PDF" no formulário de processamento
+- [x] Impressão em formato A4 com cabeçalho oficial
+- [x] Removido watermark "Made with Emergent"
+- [x] Guia de instalação criado (Linux/Windows, localhost/servidor)
 
-### Integrações
-- [x] Object Storage para arquivos
-- [x] JWT para autenticação
-
-## Prioritized Backlog
-
-### P0 (Critical) - DONE
-- Login e autenticação
-- Dashboard básico
-- CRUD de casos
-- Permissões por role
-
-### P1 (High) - DONE
-- Upload de arquivos
-- Processamento de casos com sanções
-- Exportação de dados
-- Log de atividades
-
-### P2 (Medium) - FUTURE
-- Notificações por email quando status mudar
-- Backup automático
-- Integração com Sistema de Gestão Pessoal (PMS)
-- Relatórios avançados personalizados
-
-### P3 (Low) - FUTURE
-- Dashboard com mais métricas
-- Filtros avançados
-- Histórico de alterações por caso
-- Modo offline
-
-## Next Tasks
-1. Implementar notificações por email (Resend já configurado)
-2. Adicionar validações mais rigorosas nos formulários
-3. Implementar backup automático
-4. Adicionar mais gráficos no dashboard
-5. Implementar busca avançada com mais filtros
+## Documentation
+- `/app/INSTALLATION_GUIDE.md` - Guia completo de instalação
 
 ## Technical Stack
 - **Backend**: FastAPI, MongoDB, PyJWT, bcrypt

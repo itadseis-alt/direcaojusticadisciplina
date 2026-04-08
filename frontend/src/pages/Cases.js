@@ -35,9 +35,19 @@ const statusOptions = [
 ];
 
 const postos = [
-  'Soldado', 'Cabo', 'Sargento', '1º Sargento', 'Sargento-Mor',
-  'Alferes', 'Tenente', 'Capitão', 'Major', 'Tenente-Coronel', 'Coronel',
-  'Brigadeiro', 'Major-General', 'Tenente-General', 'General'
+  // Oficiais Generais
+  'General', 'Almirante', 'Tenente General', 'Vice Almirante', 
+  'Major General', 'Contra Almirante', 'Brigadeiro General', 'Comodoro',
+  // Oficiais Superiores
+  'Coronel', 'Capitão-de-mar-e-guerra', 'Tenente-Coronel', 
+  'Capitão de Fragata', 'Major', 'Capitão Tenente',
+  // Oficiais Capitães e Subalternos
+  'Capitão', 'Primeiro Tenente', 'Tenente', 'Segundo Tenente', 'Alferes', 'Subtenente',
+  // Sargentos
+  'Sargento Mor', 'Sargento Chefe', 'Sargento Ajudante', 'Primeiro Sargento', 'Segundo Sargento',
+  // Praças
+  'Cabo Secção', 'Cabo', 'Cabo Adjunto', 'Primeiro Marinheiro', 
+  'Segundo Cabo', 'Primeiro Grumete', 'Soldado'
 ];
 
 export default function Cases() {

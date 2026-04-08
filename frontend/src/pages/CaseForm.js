@@ -15,17 +15,43 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 
-const postos = [
-  'Soldado', 'Cabo', 'Sargento', '1º Sargento', 'Sargento-Mor',
-  'Alferes', 'Tenente', 'Capitão', 'Major', 'Tenente-Coronel', 'Coronel',
-  'Brigadeiro', 'Major-General', 'Tenente-General', 'General'
-];
+const postosGroups = {
+  'Oficiais Generais': [
+    'General', 'Almirante', 'Tenente General', 'Vice Almirante', 
+    'Major General', 'Contra Almirante', 'Brigadeiro General', 'Comodoro'
+  ],
+  'Oficiais Superiores': [
+    'Coronel', 'Capitão-de-mar-e-guerra', 'Tenente-Coronel', 
+    'Capitão de Fragata', 'Major', 'Capitão Tenente'
+  ],
+  'Oficiais Capitães e Subalternos': [
+    'Capitão', 'Primeiro Tenente', 'Tenente', 'Segundo Tenente', 'Alferes', 'Subtenente'
+  ],
+  'Sargentos': [
+    'Sargento Mor', 'Sargento Chefe', 'Sargento Ajudante', 'Primeiro Sargento', 'Segundo Sargento'
+  ],
+  'Praças': [
+    'Cabo Secção', 'Cabo', 'Cabo Adjunto', 'Primeiro Marinheiro', 
+    'Segundo Cabo', 'Primeiro Grumete', 'Soldado'
+  ]
+};
 
 const unidades = [
-  '1º Batalhão', '2º Batalhão', '3º Batalhão', '4º Batalhão',
-  'Comando Naval', 'Força Aérea', 'Polícia Militar', 
-  'QG - Quartel General', 'Escola de Formação', 'Hospital Militar',
-  'Centro de Logística', 'Comando de Operações'
+  'Unidade Apoio Quartel General',
+  'Quartel General',
+  'Componente Força Terrestre (CFT)',
+  'Componente Força Naval (CFN)',
+  'Componente Aérea Ligeira (CAL)',
+  'Força Apoio Geral (FAG)',
+  'Unidade Apoio Serviço (UAS)',
+  'Centro de Instrução do Comandante Nicolau Lobato (CICNL)',
+  'Unidade de Polícia Militar (PM)',
+  'Unidade FALINTIL (UF)',
+  '1º Batalhão da CFT',
+  '2º Batalhão da CFT',
+  'Companhia de Engenharia',
+  'Companhia de Transmissões',
+  'Corpo Fuzileiros'
 ];
 
 const tiposCaso = [
@@ -83,6 +109,7 @@ export default function CaseForm() {
         posto: data.posto,
         componente_unidade: data.componente_unidade,
         requerente: data.requerente,
+        telefone_requerente: data.telefone_requerente || '',
         telefone: data.telefone || '',
         nim: data.nim || '',
         sexo: data.sexo || ''
@@ -269,8 +296,13 @@ export default function CaseForm() {
                     <SelectValue placeholder="Selecione o posto" />
                   </SelectTrigger>
                   <SelectContent>
-                    {postos.map(p => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    {Object.entries(postosGroups).map(([group, postos]) => (
+                      <div key={group}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 bg-zinc-50">{group}</div>
+                        {postos.map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
@@ -341,6 +373,16 @@ export default function CaseForm() {
                   className="rounded-none"
                   required
                   data-testid="case-requerente-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone do Requerente</Label>
+                <Input
+                  value={formData.telefone_requerente}
+                  onChange={(e) => handleChange('telefone_requerente', e.target.value)}
+                  placeholder="77000000"
+                  className="rounded-none font-mono"
+                  data-testid="case-telefone-requerente-input"
                 />
               </div>
             </div>

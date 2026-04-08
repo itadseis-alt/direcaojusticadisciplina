@@ -108,16 +108,48 @@ code, .mono {
 
 /* Print styles */
 @media print {
+    @page {
+        size: A4;
+        margin: 15mm;
+    }
+    
     .no-print {
         display: none !important;
     }
     
     body {
         background: white;
+        font-size: 11pt;
+        line-height: 1.4;
     }
     
     .print-header {
         display: block !important;
+    }
+    
+    /* Hide sidebar and other navigation */
+    aside, header, nav {
+        display: none !important;
+    }
+    
+    main {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Print-friendly borders */
+    .bg-white.border {
+        border: 1px solid #000 !important;
+        margin-bottom: 10pt;
+    }
+    
+    /* Ensure text is black */
+    * {
+        color: #000 !important;
+    }
+    
+    .text-mono-label {
+        font-size: 9pt;
     }
 }
 

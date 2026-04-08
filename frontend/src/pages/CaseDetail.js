@@ -80,6 +80,7 @@ export default function CaseDetail() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [despachoFile, setDespachoFile] = useState(null);
+  const [processPdfFile, setProcessPdfFile] = useState(null);
   const [processData, setProcessData] = useState({
     tipo_sancao: '',
     data_despacho: '',
@@ -160,9 +161,14 @@ export default function CaseDetail() {
     }
     setSubmitting(true);
     try {
+      // Upload PDF if provided
+      if (processPdfFile) {
+        await casesApi.uploadDespacho(id, processPdfFile);
+      }
       await casesApi.process(id, processData);
       toast.success('Caso processado com sucesso');
       setProcessDialogOpen(false);
+      setProcessPdfFile(null);
       loadCase();
     } catch (error) {
       console.error('Process error:', error);
@@ -260,11 +266,21 @@ export default function CaseDetail() {
           Voltar para lista
         </Link>
 
-        {/* Print Header */}
-        <div className="print-header text-center mb-8">
-          <h1 className="text-xl font-bold">FALINTIL - Força da Defesa de Timor-Leste</h1>
-          <h2 className="text-lg">Direção Justiça e Disciplina</h2>
-          <p className="text-sm mt-2">Ficha de Caso Disciplinar</p>
+        {/* Print Header with Logo */}
+        <div className="print-header text-center mb-8 pb-4 border-b-2 border-zinc-900">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/ffdtl-logo.png" 
+              alt="F-FDTL Logo" 
+              className="h-20 w-auto"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          </div>
+          <h1 className="text-xl font-bold uppercase tracking-wide">FALINTIL - Força de Defesa de Timor-Leste</h1>
+          <h2 className="text-base font-semibold mt-1">Direção Justiça e Disciplina</h2>
+          <div className="mt-4 pt-4 border-t border-zinc-300">
+            <p className="text-lg font-bold">FICHA DE CASO DISCIPLINAR</p>
+          </div>
         </div>
 
         {/* Status Card */}
@@ -395,6 +411,12 @@ export default function CaseDetail() {
                 <p className="text-mono-label text-xs text-zinc-500">Requerente</p>
                 <p className="text-zinc-900">{caso.requerente}</p>
               </div>
+              {caso.telefone_requerente && (
+                <div>
+                  <p className="text-mono-label text-xs text-zinc-500">Telefone Requerente</p>
+                  <p className="font-mono text-zinc-900">{caso.telefone_requerente}</p>
+                </div>
+              )}
               <div>
                 <p className="text-mono-label text-xs text-zinc-500">Registrado por</p>
                 <p className="text-zinc-900">{caso.registrado_por}</p>
@@ -583,6 +605,17 @@ export default function CaseDetail() {
                 className="rounded-none"
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Anexar Documento (PDF)</Label>
+              <Input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setProcessPdfFile(e.target.files[0])}
+                className="rounded-none"
+              />
+              <p className="text-xs text-zinc-500">Anexe o despacho ou documento relacionado (opcional)</p>
             </div>
           </div>
           

@@ -142,6 +142,7 @@ class CaseCreate(BaseModel):
     posto: str
     componente_unidade: str
     requerente: str
+    telefone_requerente: Optional[str] = None
     telefone: Optional[str] = None
     nim: Optional[str] = None
     sexo: Optional[str] = None
@@ -377,6 +378,7 @@ async def create_case(case_data: CaseCreate, request: Request):
         "posto": case_data.posto,
         "componente_unidade": case_data.componente_unidade,
         "requerente": case_data.requerente,
+        "telefone_requerente": case_data.telefone_requerente,
         "telefone": case_data.telefone,
         "nim": case_data.nim,
         "sexo": case_data.sexo,
