@@ -826,6 +826,155 @@ async def export_cases(request: Request, format: str = "csv"):
 async def root():
     return {"message": "Sistema de Gestão Disciplinar - FALINTIL-FDTL"}
 
+# Sanction Expiry Notifications - Check for sanctions ending in 5 days
+@api_router.get("/notifications/expiring-sanctions")
+async def get_expiring_sanctions(request: Request):
+    """Get list of cases with sanctions expiring in 5 days or less"""
+    await get_current_user(request)
+    
+    today = datetime.now(timezone.utc).date()
+    five_days_later = today + timedelta(days=5)
+    
+    # Find all processed cases with data_fim within next 5 days
+    cases = await db.cases.find(
+        {"status": "processado", "data_fim": {"$ne": None}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    expiring_cases = []
+    for case in cases:
+        if case.get("data_fim"):
+            try:
+                data_fim = datetime.strptime(case["data_fim"], "%Y-%m-%d").date()
+                days_remaining = (data_fim - today).days
+                
+                if 0 <= days_remaining <= 5:
+                    expiring_cases.append({
+                        "id": case["id"],
+                        "numero": case["numero"],
+                        "refere_ao": case["refere_ao"],
+                        "posto": case["posto"],
+                        "componente_unidade": case["componente_unidade"],
+                        "tipo_sancao": case["tipo_sancao"],
+                        "data_fim": case["data_fim"],
+                        "dias_restantes": days_remaining
+                    })
+            except (ValueError, TypeError):
+                continue
+    
+    # Sort by days remaining (closest first)
+    expiring_cases.sort(key=lambda x: x["dias_restantes"])
+    
+    return {"notifications": expiring_cases, "count": len(expiring_cases)}
+
+# Member History - Get all cases for a specific member
+@api_router.get("/member-history/{nim}")
+async def get_member_history(nim: str, request: Request):
+    """Get complete case history for a member by NIM"""
+    await get_current_user(request)
+    
+    cases = await db.cases.find(
+        {"nim": nim},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Calculate summary
+    summary = {
+        "total_casos": len(cases),
+        "processados": len([c for c in cases if c["status"] == "processado"]),
+        "arquivados": len([c for c in cases if c["status"] == "arquivado"]),
+        "pendentes": len([c for c in cases if c["status"] == "pendente"]),
+        "anulados": len([c for c in cases if c["status"] == "anulado"]),
+        "em_processo": len([c for c in cases if c["status"] == "em_processo"])
+    }
+    
+    return {
+        "nim": nim,
+        "cases": cases,
+        "summary": summary,
+        "historico_limpo": len(cases) == 0
+    }
+
+# Search member by name for history
+@api_router.get("/member-search")
+async def search_member(request: Request, q: str = ""):
+    """Search for members by name or NIM"""
+    await get_current_user(request)
+    
+    if not q or len(q) < 2:
+        return {"members": []}
+    
+    # Find distinct members
+    pipeline = [
+        {"$match": {
+            "$or": [
+                {"refere_ao": {"$regex": q, "$options": "i"}},
+                {"nim": {"$regex": q, "$options": "i"}}
+            ]
+        }},
+        {"$group": {
+            "_id": "$nim",
+            "nome": {"$first": "$refere_ao"},
+            "posto": {"$first": "$posto"},
+            "unidade": {"$first": "$componente_unidade"},
+            "total_casos": {"$sum": 1}
+        }},
+        {"$limit": 20}
+    ]
+    
+    results = await db.cases.aggregate(pipeline).to_list(20)
+    
+    return {
+        "members": [
+            {
+                "nim": r["_id"],
+                "nome": r["nome"],
+                "posto": r["posto"],
+                "unidade": r["unidade"],
+                "total_casos": r["total_casos"]
+            }
+            for r in results if r["_id"]
+        ]
+    }
+
+# Background task to check and update expired sanctions
+async def check_expired_sanctions():
+    """Check for expired sanctions and move them to 'anulado' status"""
+    today = datetime.now(timezone.utc).date()
+    today_str = today.strftime("%Y-%m-%d")
+    
+    # Find all processed cases with data_fim <= today
+    cases = await db.cases.find(
+        {"status": "processado", "data_fim": {"$ne": None}},
+        {"_id": 0, "id": 1, "numero": 1, "data_fim": 1, "refere_ao": 1}
+    ).to_list(1000)
+    
+    updated_count = 0
+    for case in cases:
+        if case.get("data_fim"):
+            try:
+                data_fim = datetime.strptime(case["data_fim"], "%Y-%m-%d").date()
+                if data_fim <= today:
+                    # Update status to anulado (sanção concluída)
+                    await db.cases.update_one(
+                        {"id": case["id"]},
+                        {"$set": {
+                            "status": "anulado",
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                            "motivo_anulacao": "Sanção concluída - prazo encerrado"
+                        }}
+                    )
+                    await log_activity("system", "Sistema", "AUTO_EXPIRE", 
+                        f"Caso {case['numero']} - sanção de {case['refere_ao']} concluída automaticamente")
+                    updated_count += 1
+            except (ValueError, TypeError):
+                continue
+    
+    if updated_count > 0:
+        logger.info(f"Auto-expired {updated_count} sanctions")
+    
+    return updated_count
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -878,7 +1027,24 @@ async def startup():
     # Seed demo data
     await seed_demo_data()
     
+    # Check for expired sanctions on startup
+    expired_count = await check_expired_sanctions()
+    if expired_count > 0:
+        logger.info(f"Moved {expired_count} expired sanctions to 'anulado'")
+    
+    # Start background task for periodic sanction check
+    asyncio.create_task(periodic_sanction_check())
+    
     logger.info("Sistema de Gestão Disciplinar iniciado")
+
+async def periodic_sanction_check():
+    """Periodically check for expired sanctions (every hour)"""
+    while True:
+        await asyncio.sleep(3600)  # Check every hour
+        try:
+            await check_expired_sanctions()
+        except Exception as e:
+            logger.error(f"Periodic sanction check failed: {e}")
 
 async def seed_demo_data():
     """Seed demo users and cases"""

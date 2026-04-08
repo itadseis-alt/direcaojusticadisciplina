@@ -14,6 +14,7 @@ import UserForm from "@/pages/UserForm";
 import ActivityLogs from "@/pages/ActivityLogs";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
+import MemberHistory from "@/pages/MemberHistory";
 
 // Protected Route Component
 function ProtectedRoute({ children, requiredRoles = [] }) {
@@ -105,6 +106,12 @@ function AppRoutes() {
       <Route path="/relatorios" element={
         <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica']}>
           <Reports />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/historico" element={
+        <ProtectedRoute>
+          <MemberHistory />
         </ProtectedRoute>
       } />
       

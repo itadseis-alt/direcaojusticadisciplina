@@ -123,6 +123,26 @@ export const dashboardApi = {
   }
 };
 
+// Notifications API
+export const notificationsApi = {
+  getExpiringSanctions: async () => {
+    const { data } = await axios.get(`${API}/notifications/expiring-sanctions`);
+    return data;
+  }
+};
+
+// Member History API
+export const memberApi = {
+  getHistory: async (nim) => {
+    const { data } = await axios.get(`${API}/member-history/${nim}`);
+    return data;
+  },
+  search: async (query) => {
+    const { data } = await axios.get(`${API}/member-search`, { params: { q: query } });
+    return data;
+  }
+};
+
 // Activity Logs API
 export const logsApi = {
   list: async (page = 1, limit = 50) => {

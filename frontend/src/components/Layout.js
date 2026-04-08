@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { NotificationBell } from '@/components/NotificationBell';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -10,7 +11,8 @@ import {
   LogOut,
   Menu,
   Plus,
-  BarChart3
+  BarChart3,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +23,7 @@ import {
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
   { path: '/casos', label: 'Casos', icon: FileText, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
+  { path: '/historico', label: 'Histórico', icon: History, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
   { path: '/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['super_admin', 'admin', 'pessoal_justica'] },
   { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['super_admin', 'admin'] },
   { path: '/logs', label: 'Logs', icon: Activity, roles: ['super_admin'] },
@@ -168,11 +171,10 @@ export function Layout({ children, title, actions }) {
                   <h2 className="text-xl font-bold tracking-tight text-zinc-900">{title}</h2>
                 </div>
               </div>
-              {actions && (
-                <div className="flex items-center gap-2">
-                  {actions}
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {actions}
+                <NotificationBell />
+              </div>
             </div>
           </header>
 
