@@ -7,12 +7,13 @@
 ## INDICE
 
 1. [Requisitos do Sistema](#requisitos-do-sistema)
-2. [PARTE 1 - Instalacao em Localhost (Linux)](#parte-1a---instalacao-em-localhost-linux)
-3. [PARTE 1 - Instalacao em Localhost (Windows)](#parte-1b---instalacao-em-localhost-windows)
-4. [PARTE 2 - Instalacao em Servidor (Linux)](#parte-2a---instalacao-em-servidor-linux)
-5. [PARTE 2 - Instalacao em Servidor (Windows)](#parte-2b---instalacao-em-servidor-windows)
-6. [Credenciais Padrao](#credenciais-padrao)
-7. [Backup e Restauracao](#backup-e-restauracao)
+2. [PARTE 1A - Instalacao em Localhost (Linux)](#parte-1a---instalacao-em-localhost-linux)
+3. [PARTE 1B - Instalacao em Localhost (Windows)](#parte-1b---instalacao-em-localhost-windows)
+4. [PARTE 1C - Acesso pela Rede Local (outro computador)](#parte-1c---acesso-pela-rede-local-outro-computador)
+5. [PARTE 2A - Instalacao em Servidor (Linux)](#parte-2a---instalacao-em-servidor-linux)
+6. [PARTE 2B - Instalacao em Servidor (Windows)](#parte-2b---instalacao-em-servidor-windows)
+7. [Credenciais Padrao](#credenciais-padrao)
+8. [Backup e Restauracao](#backup-e-restauracao)
 8. [Solucao de Problemas](#solucao-de-problemas)
 
 ---
@@ -430,6 +431,295 @@ O navegador deve abrir automaticamente.
 5. Verifique se consegue visualizar e criar casos
 
 **Para parar:** Pressione `Ctrl+C` em cada janela do PowerShell.
+
+---
+
+## PARTE 1C - ACESSO PELA REDE LOCAL (OUTRO COMPUTADOR)
+
+> Depois de instalar o sistema num computador (seguindo a Parte 1A ou 1B), pode acessa-lo a partir de qualquer outro computador na mesma rede Wi-Fi ou rede cabeada (LAN).
+
+### Como funciona
+
+O computador onde o sistema esta instalado funciona como um "servidor local". Os outros computadores na mesma rede podem aceder ao sistema atraves do navegador, usando o endereco IP desse computador.
+
+```
+  [Computador A]                    [Computador B]
+  Sistema instalado aqui            Acessa pelo navegador
+  IP: 192.168.1.100         --->    http://192.168.1.100:3000
+  Backend: porta 8001
+  Frontend: porta 3000
+```
+
+---
+
+### Passo 1 de 5: Descobrir o IP do computador onde o sistema esta instalado
+
+**No Linux:**
+
+```bash
+# Opcao 1 - Comando ip
+ip addr show | grep "inet " | grep -v 127.0.0.1
+# Procure o endereco que comeca com 192.168.x.x ou 10.x.x.x
+# Exemplo de resultado:
+#     inet 192.168.1.100/24 brd 192.168.1.255 scope global
+
+# Opcao 2 - Comando hostname
+hostname -I
+# Exemplo: 192.168.1.100
+```
+
+**No Windows:**
+
+```powershell
+# No PowerShell
+ipconfig
+```
+
+Procure pela secao "Adaptador de Rede Sem Fio Wi-Fi" ou "Adaptador Ethernet":
+```
+   Endereco IPv4. . . . . . . . : 192.168.1.100
+```
+
+> ANOTE ESTE NUMERO (exemplo: 192.168.1.100). Vai precisar dele nos proximos passos.
+
+---
+
+### Passo 2 de 5: Atualizar o ficheiro .env do Frontend
+
+No computador onde o sistema esta instalado, altere o ficheiro `.env` do frontend para usar o IP em vez de `localhost`:
+
+**No Linux:**
+
+```bash
+cd sistema-disciplinar/frontend
+
+# Editar o ficheiro .env
+nano .env
+```
+
+**No Windows:**
+
+Abra o ficheiro `.env` da pasta `frontend` com o Bloco de Notas.
+
+**Altere o conteudo de:**
+```
+REACT_APP_BACKEND_URL=http://localhost:8001
+```
+
+**Para:**
+```
+REACT_APP_BACKEND_URL=http://192.168.1.100:8001
+```
+
+> Substitua `192.168.1.100` pelo IP real que encontrou no Passo 1.
+
+---
+
+### Passo 3 de 5: Atualizar o ficheiro .env do Backend
+
+Altere o ficheiro `.env` do backend para aceitar conexoes da rede:
+
+**No Linux:**
+
+```bash
+cd sistema-disciplinar/backend
+nano .env
+```
+
+**No Windows:**
+
+Abra o ficheiro `.env` da pasta `backend` com o Bloco de Notas.
+
+**Altere as linhas:**
+```
+FRONTEND_URL=http://localhost:3000
+CORS_ORIGINS=http://localhost:3000
+```
+
+**Para:**
+```
+FRONTEND_URL=http://192.168.1.100:3000
+CORS_ORIGINS=http://192.168.1.100:3000,http://localhost:3000
+```
+
+> Mantemos `http://localhost:3000` no CORS_ORIGINS para que o acesso local tambem continue a funcionar.
+
+---
+
+### Passo 4 de 5: Liberar as portas no Firewall
+
+O firewall do computador pode bloquear o acesso de outros computadores. Precisa abrir as portas 3000 e 8001.
+
+**No Linux (UFW):**
+
+```bash
+# Abrir porta do frontend
+sudo ufw allow 3000
+
+# Abrir porta do backend
+sudo ufw allow 8001
+
+# Verificar
+sudo ufw status
+```
+
+Se o UFW nao estiver ativo, pode nao ser necessario (mas e recomendado ativa-lo):
+```bash
+sudo ufw enable
+```
+
+**No Windows:**
+
+Opcao 1 - Pelo PowerShell (como Administrador):
+
+```powershell
+# Abrir porta do frontend
+New-NetFirewallRule -DisplayName "Disciplina Frontend" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+
+# Abrir porta do backend
+New-NetFirewallRule -DisplayName "Disciplina Backend" -Direction Inbound -Protocol TCP -LocalPort 8001 -Action Allow
+```
+
+Opcao 2 - Pela interface grafica:
+
+1. Pressione a tecla Windows e procure **"Firewall do Windows Defender"**
+2. Clique em **"Configuracoes avancadas"** (no lado esquerdo)
+3. Clique em **"Regras de Entrada"** (Inbound Rules)
+4. Clique em **"Nova Regra..."** (New Rule)
+5. Selecione **"Porta"** e clique Proximo
+6. Selecione **"TCP"** e em "Portas locais especificas" digite: **3000, 8001**
+7. Selecione **"Permitir a conexao"** e clique Proximo
+8. Marque todos os perfis (Dominio, Privado, Publico) e clique Proximo
+9. Nome: **"Sistema Disciplinar"** e clique Concluir
+
+---
+
+### Passo 5 de 5: Reiniciar e acessar de outro computador
+
+**No computador onde o sistema esta instalado:**
+
+Pare os servicos (Ctrl+C em ambos os terminais) e inicie novamente:
+
+**Linux:**
+```bash
+# Terminal 1 - Backend
+cd sistema-disciplinar/backend
+source venv/bin/activate
+uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+# Terminal 2 - Frontend
+cd sistema-disciplinar/frontend
+HOST=0.0.0.0 yarn start
+```
+
+**Windows:**
+```powershell
+# PowerShell 1 - Backend
+cd C:\Users\SeuUsuario\Documents\sistema-disciplinar\backend
+.\venv\Scripts\activate
+uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+# PowerShell 2 - Frontend
+cd C:\Users\SeuUsuario\Documents\sistema-disciplinar\frontend
+$env:HOST="0.0.0.0"
+yarn start
+```
+
+> NOTA: O `--host 0.0.0.0` e o `HOST=0.0.0.0` sao essenciais! Permitem que o sistema aceite conexoes de outros computadores na rede, nao apenas do localhost.
+
+**No outro computador (que quer acessar):**
+
+1. Abra o navegador (Chrome, Firefox, Edge, etc.)
+2. Na barra de endereco, digite:
+
+```
+http://192.168.1.100:3000
+```
+
+3. A pagina de login do sistema deve aparecer
+4. Faca login com as credenciais normais
+
+> Substitua `192.168.1.100` pelo IP real do computador onde o sistema esta instalado.
+
+---
+
+### Resumo rapido - Acesso pela rede
+
+| O que fazer                        | Onde                | Valor                                  |
+|------------------------------------|---------------------|----------------------------------------|
+| Descobrir o IP                     | Computador A        | `hostname -I` (Linux) / `ipconfig` (Win) |
+| Frontend .env                      | Computador A        | `REACT_APP_BACKEND_URL=http://IP:8001` |
+| Backend .env - FRONTEND_URL        | Computador A        | `http://IP:3000`                       |
+| Backend .env - CORS_ORIGINS        | Computador A        | `http://IP:3000,http://localhost:3000` |
+| Liberar portas firewall            | Computador A        | 3000 e 8001                            |
+| Iniciar backend com                | Computador A        | `--host 0.0.0.0`                       |
+| Iniciar frontend com               | Computador A        | `HOST=0.0.0.0 yarn start`             |
+| Acessar no navegador               | Computador B        | `http://IP:3000`                       |
+
+---
+
+### Solucao de problemas - Acesso pela rede
+
+**Nao consigo acessar de outro computador:**
+
+1. Verifique se os dois computadores estao na mesma rede (mesmo Wi-Fi ou mesma LAN)
+2. No computador B, tente fazer ping ao computador A:
+   ```bash
+   ping 192.168.1.100
+   ```
+   Se nao responder, ha um problema de rede ou firewall.
+
+3. No computador A, verifique se as portas estao abertas:
+   ```bash
+   # Linux
+   sudo ss -tlnp | grep -E "3000|8001"
+
+   # Windows PowerShell
+   netstat -ano | findstr "3000 8001"
+   ```
+   Deve mostrar `0.0.0.0:3000` e `0.0.0.0:8001` (nao `127.0.0.1`)
+
+4. Se mostrar `127.0.0.1` em vez de `0.0.0.0`:
+   - Backend: certifique-se de usar `--host 0.0.0.0`
+   - Frontend: certifique-se de definir `HOST=0.0.0.0` antes do `yarn start`
+
+**O sistema abre mas da erro ao carregar dados:**
+
+- O ficheiro `.env` do frontend tem o IP correto no `REACT_APP_BACKEND_URL`?
+- O ficheiro `.env` do backend tem o IP correto no `CORS_ORIGINS`?
+- Reiniciou ambos os servicos apos alterar os ficheiros `.env`?
+
+**O IP do computador mudou:**
+
+Se o IP muda frequentemente, configure um IP fixo:
+
+Linux:
+```bash
+sudo nano /etc/netplan/01-netcfg.yaml
+```
+```yaml
+network:
+  version: 2
+  ethernets:
+    eth0:
+      addresses:
+        - 192.168.1.100/24
+      gateway4: 192.168.1.1
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]
+```
+```bash
+sudo netplan apply
+```
+
+Windows:
+1. Painel de Controle > Rede e Internet > Centro de Rede
+2. Clique no adaptador de rede > Propriedades
+3. Selecione "Protocolo IP Versao 4 (TCP/IPv4)" > Propriedades
+4. Selecione "Usar o seguinte endereco IP"
+5. Preencha: IP `192.168.1.100`, Mascara `255.255.255.0`, Gateway `192.168.1.1`
+6. DNS: `8.8.8.8` e `8.8.4.4`
+7. OK
 
 ---
 
