@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
 import { casesApi, dashboardApi } from '@/lib/api';
 import { 
@@ -6,7 +6,8 @@ import {
   Download,
   Printer,
   FileText,
-  BarChart3
+  BarChart3,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +29,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  LineChart,
+  Line
 } from 'recharts';
 
 const unidades = [
@@ -68,9 +71,54 @@ const STATUS_LABELS = {
 
 export default function Reports() {
   const [selectedUnidade, setSelectedUnidade] = useState('Todas as Unidades');
+  const [selectedYear, setSelectedYear] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
   const [cases, setCases] = useState([]);
+
+  const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+  // Get available years from cases
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    cases.forEach(c => {
+      const date = c.data_registo || c.data_incidente;
+      if (date) years.add(date.substring(0, 4));
+    });
+    return Array.from(years).sort().reverse();
+  }, [cases]);
+
+  // Monthly statistics
+  const monthlyStats = useMemo(() => {
+    if (!cases.length) return [];
+
+    if (selectedYear === 'todos') {
+      // Group by year
+      const byYear = {};
+      cases.forEach(c => {
+        const date = c.data_registo || c.data_incidente;
+        if (date) {
+          const year = date.substring(0, 4);
+          byYear[year] = (byYear[year] || 0) + 1;
+        }
+      });
+      return Object.entries(byYear)
+        .map(([ano, total]) => ({ periodo: ano, total }))
+        .sort((a, b) => a.periodo.localeCompare(b.periodo));
+    } else {
+      // Group by month for selected year
+      const byMonth = {};
+      MONTH_NAMES.forEach((m, i) => { byMonth[i] = 0; });
+      cases.forEach(c => {
+        const date = c.data_registo || c.data_incidente;
+        if (date && date.startsWith(selectedYear)) {
+          const month = parseInt(date.substring(5, 7)) - 1;
+          byMonth[month] = (byMonth[month] || 0) + 1;
+        }
+      });
+      return MONTH_NAMES.map((nome, i) => ({ periodo: nome, total: byMonth[i] }));
+    }
+  }, [cases, selectedYear]);
 
   useEffect(() => {
     loadReportData();
@@ -215,7 +263,7 @@ export default function Reports() {
 
         {/* Filter */}
         <div className="bg-white border border-zinc-200 p-4 no-print">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <BarChart3 className="w-5 h-5 text-zinc-400" />
             <Select value={selectedUnidade} onValueChange={setSelectedUnidade}>
               <SelectTrigger className="w-[350px] rounded-none" data-testid="unit-filter">
@@ -224,6 +272,18 @@ export default function Reports() {
               <SelectContent>
                 {unidades.map(u => (
                   <SelectItem key={u} value={u}>{u}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Calendar className="w-5 h-5 text-zinc-400 ml-2" />
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[180px] rounded-none" data-testid="year-filter">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todo Período</SelectItem>
+                {availableYears.map(y => (
+                  <SelectItem key={y} value={y}>{y}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -261,6 +321,32 @@ export default function Reports() {
               <div className="bg-white border border-[#991B1B] p-4 text-center">
                 <p className="text-3xl font-black text-[#991B1B]">{reportData.stats.anulados}</p>
                 <p className="text-mono-label text-xs text-zinc-500 mt-1">Anulados</p>
+              </div>
+            </div>
+
+            {/* Monthly/Yearly Evolution */}
+            <div className="bg-white border border-zinc-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-mono-label text-xs text-zinc-500">
+                  {selectedYear === 'todos' ? 'Evolução Anual de Casos' : `Casos por Mês - ${selectedYear}`}
+                </h3>
+                <span className="text-xs text-zinc-400">
+                  {monthlyStats.reduce((sum, m) => sum + m.total, 0)} caso(s) no período
+                </span>
+              </div>
+              <div className="h-72" data-testid="monthly-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E4E4E7" />
+                    <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip 
+                      formatter={(value) => [`${value} caso(s)`, 'Total']}
+                      contentStyle={{ border: '1px solid #e4e4e7', borderRadius: 0 }}
+                    />
+                    <Bar dataKey="total" fill="#1E40AF" name="Casos" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 

@@ -63,11 +63,11 @@ export default function Cases() {
   const [status, setStatus] = useState(searchParams.get('status') || 'all');
   const [posto, setPosto] = useState(searchParams.get('posto') || 'all');
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
-  const limit = 20;
+  const [limit, setLimit] = useState(parseInt(searchParams.get('limit')) || 10);
 
   useEffect(() => {
     loadCases();
-  }, [status, posto, page]);
+  }, [status, posto, page, limit]);
 
   const loadCases = async () => {
     setLoading(true);
@@ -87,6 +87,7 @@ export default function Cases() {
       if (status && status !== 'all') newParams.set('status', status);
       if (posto && posto !== 'all') newParams.set('posto', posto);
       if (page > 1) newParams.set('page', page.toString());
+      if (limit !== 10) newParams.set('limit', limit.toString());
       setSearchParams(newParams);
     } catch (error) {
       console.error('Error loading cases:', error);
@@ -232,9 +233,23 @@ export default function Cases() {
 
         {/* Results info */}
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-500" data-testid="case-count-info">
             {total} caso{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
           </p>
+          <div className="flex items-center gap-2 text-sm text-zinc-500">
+            <span>Mostrar</span>
+            <Select value={limit.toString()} onValueChange={(v) => { setLimit(parseInt(v)); setPage(1); }}>
+              <SelectTrigger className="w-[80px] h-8 rounded-none text-sm" data-testid="page-size-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span>por página</span>
+          </div>
         </div>
 
         {/* Table */}
@@ -296,28 +311,71 @@ export default function Cases() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-zinc-500">
-              Página {page} de {totalPages}
+              Mostrando {((page - 1) * limit) + 1}-{Math.min(page * limit, total)} de {total}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="rounded-none h-8 px-2"
+                data-testid="pagination-first"
+              >
+                <ChevronLeft className="w-4 h-4" /><ChevronLeft className="w-4 h-4 -ml-2" />
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-none"
+                className="rounded-none h-8 px-2"
+                data-testid="pagination-prev"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Anterior
               </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`dots-${idx}`} className="px-1 text-zinc-400">...</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(p)}
+                      className={`rounded-none h-8 w-8 p-0 ${p === page ? 'bg-zinc-900 text-white' : ''}`}
+                      data-testid={`pagination-page-${p}`}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="rounded-none"
+                className="rounded-none h-8 px-2"
+                data-testid="pagination-next"
               >
-                Próximo
                 <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="rounded-none h-8 px-2"
+                data-testid="pagination-last"
+              >
+                <ChevronRight className="w-4 h-4" /><ChevronRight className="w-4 h-4 -ml-2" />
               </Button>
             </div>
           </div>
