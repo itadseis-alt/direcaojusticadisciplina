@@ -32,18 +32,18 @@ import {
 const COLORS = ['#09090B', '#52525B', '#A1A1AA', '#D4D4D8', '#E4E4E7'];
 const GENDER_COLORS = ['#1E40AF', '#9A3412'];
 
-function StatCard({ title, value, icon: Icon, color = 'zinc', subtitle }) {
+function StatCard({ title, value, icon: Icon, color = 'zinc', subtitle, href }) {
   const colorClasses = {
-    zinc: 'border-zinc-200',
-    green: 'border-[#166534]',
-    orange: 'border-[#9A3412]',
-    red: 'border-[#991B1B]',
-    blue: 'border-[#1E40AF]',
-    gray: 'border-[#3F3F46]'
+    zinc: 'border-zinc-200 hover:border-zinc-400',
+    green: 'border-[#166534] hover:border-[#14532d]',
+    orange: 'border-[#9A3412] hover:border-[#7c2d12]',
+    red: 'border-[#991B1B] hover:border-[#7f1d1d]',
+    blue: 'border-[#1E40AF] hover:border-[#1e3a8a]',
+    gray: 'border-[#3F3F46] hover:border-[#27272a]'
   };
 
-  return (
-    <div className={`bg-white border ${colorClasses[color]} p-6`}>
+  const Content = (
+    <div className={`bg-white border ${colorClasses[color]} p-6 transition-all ${href ? 'cursor-pointer hover:shadow-md' : ''}`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-mono-label text-zinc-500 text-xs mb-2">{title}</p>
@@ -58,6 +58,11 @@ function StatCard({ title, value, icon: Icon, color = 'zinc', subtitle }) {
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link to={href} data-testid={`stat-card-${title.toLowerCase().replace(/\s/g, '-')}`}>{Content}</Link>;
+  }
+  return Content;
 }
 
 export default function Dashboard() {
@@ -120,24 +125,28 @@ export default function Dashboard() {
             title="Total de Casos"
             value={stats?.total || 0}
             icon={FileText}
+            href="/casos"
           />
           <StatCard
             title="Processados"
             value={stats?.processados || 0}
             icon={CheckCircle}
             color="green"
+            href="/casos?status=processado"
           />
           <StatCard
             title="Pendentes"
             value={stats?.pendentes || 0}
             icon={Clock}
             color="orange"
+            href="/casos?status=pendente"
           />
           <StatCard
             title="Em Processo"
             value={stats?.em_processo || 0}
             icon={Loader}
             color="blue"
+            href="/casos?status=em_processo"
           />
         </div>
 
@@ -148,12 +157,14 @@ export default function Dashboard() {
             value={stats?.arquivados || 0}
             icon={Archive}
             color="gray"
+            href="/casos?status=arquivado"
           />
           <StatCard
             title="Anulados"
             value={stats?.anulados || 0}
             icon={XCircle}
             color="red"
+            href="/casos?status=anulado"
           />
           <StatCard
             title="Taxa de Resolução"

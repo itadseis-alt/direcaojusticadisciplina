@@ -55,15 +55,13 @@ import {
 import { toast } from 'sonner';
 
 const sancoes = [
-  'Advertência',
-  'Repreensão',
-  'Detenção 5 dias',
-  'Detenção 10 dias',
-  'Detenção 15 dias',
-  'Detenção 20 dias',
-  'Detenção 30 dias',
-  'Suspensão',
-  'Expulsão'
+  'Repreensão (1 ano)',
+  'Repreensão Agravada (1 ano)',
+  'Detenção (5 anos)',
+  'Prisão Disciplinar (10 anos)',
+  'Prisão Disciplinar Agravada (10 anos)',
+  'Reforma Compulsiva',
+  'Separação do Serviço'
 ];
 
 export default function CaseDetail() {

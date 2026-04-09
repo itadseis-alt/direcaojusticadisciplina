@@ -54,18 +54,64 @@ const unidades = [
   'Corpo Fuzileiros'
 ];
 
-const tiposCaso = [
-  'Indisciplina',
-  'Ausência sem licença',
-  'Insubordinação',
-  'Má conduta',
-  'Negligência',
-  'Desacato',
-  'Embriaguez',
-  'Abandono de posto',
-  'Desobediência',
-  'Outro'
-];
+const tiposCasoGroups = {
+  'Disciplina e Conduta': [
+    'Indisciplina',
+    'Desobediência a ordens superiores',
+    'Atraso ou ausência injustificada (faltas)',
+    'Conduta imprópria (dentro ou fora do quartel)',
+    'Insubordinação grave',
+    'Insubordinação – recusar cumprir ordens legítimas'
+  ],
+  'Deserção e Abandono': [
+    'Desertão',
+    'Abandono de posto',
+    'Deserção - abandonar o serviço por período prolongado',
+    'Abandono de posto – sair do local de serviço sem autorização',
+    'Dormir em serviço (especialmente em guarda)',
+    'Simulação de doença para evitar serviço'
+  ],
+  'Segurança Nacional': [
+    'Traição ou espionagem',
+    'Espionagem',
+    'Traição à pátria',
+    'Revelação de segredo militar',
+    'Sabotagem de equipamentos ou sistemas'
+  ],
+  'Violência e Agressão': [
+    'Violência contra superior ou colega',
+    'Violência Contra Civil',
+    'Agressão física a colega ou superior',
+    'Homicídio',
+    'Ameaça',
+    'Ameaças',
+    'Abuso de autoridade',
+    'Ofenças Integridade Física'
+  ],
+  'Patrimônio e Recursos': [
+    'Uso indevido de armamento',
+    'Furto de material militar',
+    'Furto',
+    'Desvio de equipamentos',
+    'Dano ou destruição de bens militares',
+    'Uso indevido de viaturas ou armamento'
+  ],
+  'Corrupção e Fraude': [
+    'Corrupção passiva ou ativa',
+    'Peculato (uso indevido de recursos públicos)',
+    'Fraude em contratos ou aquisições'
+  ],
+  'Crimes Cibernéticos': [
+    'Acesso ilegal a sistemas militares',
+    'Vazamento de dados confidenciais',
+    'Manipulação de informações',
+    'Ataques internos'
+  ],
+  'Outros': [
+    'Adultério',
+    'Obstrução'
+  ]
+};
 
 export default function CaseForm() {
   const { id } = useParams();
@@ -357,9 +403,14 @@ export default function CaseForm() {
                   <SelectTrigger className="rounded-none" data-testid="case-tipo-select">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {tiposCaso.map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                  <SelectContent className="max-h-80">
+                    {Object.entries(tiposCasoGroups).map(([group, tipos]) => (
+                      <div key={group}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 bg-zinc-50 sticky top-0">{group}</div>
+                        {tipos.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
