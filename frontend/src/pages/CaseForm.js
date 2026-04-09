@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -343,12 +345,12 @@ export default function CaseForm() {
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(postosGroups).map(([group, postos]) => (
-                      <div key={group}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 bg-zinc-50">{group}</div>
+                      <SelectGroup key={group}>
+                        <SelectLabel className="text-xs font-semibold text-zinc-500">{group}</SelectLabel>
                         {postos.map(p => (
                           <SelectItem key={p} value={p}>{p}</SelectItem>
                         ))}
-                      </div>
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>
@@ -405,12 +407,12 @@ export default function CaseForm() {
                   </SelectTrigger>
                   <SelectContent className="max-h-80">
                     {Object.entries(tiposCasoGroups).map(([group, tipos]) => (
-                      <div key={group}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 bg-zinc-50 sticky top-0">{group}</div>
+                      <SelectGroup key={group}>
+                        <SelectLabel className="text-xs font-semibold text-zinc-500">{group}</SelectLabel>
                         {tipos.map(t => (
                           <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
-                      </div>
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>
