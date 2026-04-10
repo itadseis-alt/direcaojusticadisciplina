@@ -291,51 +291,79 @@ export default function CaseDetail() {
               </span>
             </div>
             
-            {canEdit() && caso.status !== 'processado' && caso.status !== 'anulado' && (
+            {canEdit() && caso.status !== 'anulado' && (
               <div className="flex items-center gap-2 no-print">
                 <span className="text-sm text-zinc-500">Alterar Status:</span>
-                {caso.status !== 'em_processo' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleStatusChange('em_processo')}
-                    className="rounded-none"
-                    data-testid="status-em-processo-btn"
-                  >
-                    <Play className="w-4 h-4 mr-1" />
-                    Em Processo
-                  </Button>
+                {caso.status !== 'processado' && (
+                  <>
+                    {caso.status !== 'em_processo' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStatusChange('em_processo')}
+                        className="rounded-none"
+                        data-testid="status-em-processo-btn"
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        Em Processo
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusChange('processado')}
+                      className="rounded-none"
+                      data-testid="status-processado-btn"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Processar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusChange('arquivado')}
+                      className="rounded-none"
+                      data-testid="status-arquivado-btn"
+                    >
+                      <Archive className="w-4 h-4 mr-1" />
+                      Arquivar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusChange('anulado')}
+                      className="rounded-none text-red-600"
+                      data-testid="status-anulado-btn"
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Anular
+                    </Button>
+                  </>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusChange('processado')}
-                  className="rounded-none"
-                  data-testid="status-processado-btn"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Processar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusChange('arquivado')}
-                  className="rounded-none"
-                  data-testid="status-arquivado-btn"
-                >
-                  <Archive className="w-4 h-4 mr-1" />
-                  Arquivar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusChange('anulado')}
-                  className="rounded-none text-red-600"
-                  data-testid="status-anulado-btn"
-                >
-                  <XCircle className="w-4 h-4 mr-1" />
-                  Anular
-                </Button>
+                {caso.status === 'processado' && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusChange('arquivado')}
+                      className="rounded-none"
+                      data-testid="status-arquivado-btn"
+                    >
+                      <Archive className="w-4 h-4 mr-1" />
+                      Arquivar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusChange('pendente')}
+                      className="rounded-none text-orange-600"
+                      data-testid="status-pendente-btn"
+                    >
+                      <Clock className="w-4 h-4 mr-1" />
+                      Reabrir (Pendente)
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>

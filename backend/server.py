@@ -212,6 +212,22 @@ async def log_activity(user_id: str, user_nome: str, acao: str, detalhes: str = 
     }
     await db.activity_logs.insert_one(log_entry)
 
+# In-app notification helper for admins
+async def create_admin_notification(action: str, case_numero: str, case_refere_ao: str, actor_name: str, case_id: str):
+    """Create in-app notification for super_admin and admin users"""
+    notification = {
+        "id": str(uuid.uuid4()),
+        "type": "case_action",
+        "action": action,
+        "case_numero": case_numero,
+        "case_refere_ao": case_refere_ao,
+        "case_id": case_id,
+        "actor_name": actor_name,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.admin_notifications.insert_one(notification)
+
 # Email notification helper
 async def send_status_notification(case_numero: str, case_refere_ao: str, new_status: str, old_status: str = None):
     """Send email notification when case status changes"""
@@ -487,6 +503,8 @@ async def create_case(case_data: CaseCreate, request: Request):
     await db.cases.insert_one(case)
     await log_activity(current_user["id"], current_user["nome"], "CREATE_CASE", f"Caso {case_number} criado")
     
+    asyncio.create_task(create_admin_notification("registrou", case_number, case_data.refere_ao, current_user["nome"], case["id"]))
+    
     case.pop("_id", None)
     return case
 
@@ -554,6 +572,8 @@ async def update_case(case_id: str, request: Request):
     await db.cases.update_one({"id": case_id}, {"$set": body})
     await log_activity(current_user["id"], current_user["nome"], "UPDATE_CASE", f"Caso {case['numero']} atualizado")
     
+    asyncio.create_task(create_admin_notification("editou", case["numero"], case.get("refere_ao", ""), current_user["nome"], case_id))
+    
     return {"message": "Caso atualizado"}
 
 @api_router.put("/cases/{case_id}/status")
@@ -573,6 +593,9 @@ async def update_case_status(case_id: str, status_data: StatusUpdate, request: R
     
     await db.cases.update_one({"id": case_id}, {"$set": update_data})
     await log_activity(current_user["id"], current_user["nome"], "UPDATE_STATUS", f"Caso {case['numero']} - status: {status_data.status}")
+    
+    status_labels = {"processado": "processou", "arquivado": "arquivou", "pendente": "reabriu", "anulado": "anulou", "em_processo": "colocou em processo"}
+    asyncio.create_task(create_admin_notification(status_labels.get(status_data.status, "alterou status de"), case["numero"], case.get("refere_ao", ""), current_user["nome"], case_id))
     
     # Send notification email (async, non-blocking)
     old_status = case.get("status")
@@ -601,6 +624,8 @@ async def process_case(case_id: str, process_data: CaseProcess, request: Request
     
     await db.cases.update_one({"id": case_id}, {"$set": update_data})
     await log_activity(current_user["id"], current_user["nome"], "PROCESS_CASE", f"Caso {case['numero']} processado - sanção: {process_data.tipo_sancao}")
+    
+    asyncio.create_task(create_admin_notification("processou", case["numero"], case.get("refere_ao", ""), current_user["nome"], case_id))
     
     # Send notification email
     old_status = case.get("status")
@@ -866,6 +891,31 @@ async def get_expiring_sanctions(request: Request):
     expiring_cases.sort(key=lambda x: x["dias_restantes"])
     
     return {"notifications": expiring_cases, "count": len(expiring_cases)}
+
+@api_router.get("/notifications/admin")
+async def get_admin_notifications(request: Request):
+    """Get action notifications for super_admin and admin users"""
+    current_user = await get_current_user(request)
+    if current_user["tipo"] not in ["super_admin", "admin"]:
+        return {"notifications": [], "count": 0}
+    
+    notifications = await db.admin_notifications.find(
+        {}, {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    unread_count = await db.admin_notifications.count_documents({"read": False})
+    
+    return {"notifications": notifications, "count": len(notifications), "unread_count": unread_count}
+
+@api_router.put("/notifications/admin/mark-read")
+async def mark_admin_notifications_read(request: Request):
+    """Mark all admin notifications as read"""
+    current_user = await get_current_user(request)
+    if current_user["tipo"] not in ["super_admin", "admin"]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    await db.admin_notifications.update_many({"read": False}, {"$set": {"read": True}})
+    return {"message": "Notificações marcadas como lidas"}
 
 # Member History - Get all cases for a specific member
 @api_router.get("/member-history/{nim}")

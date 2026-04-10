@@ -128,6 +128,14 @@ export const notificationsApi = {
   getExpiringSanctions: async () => {
     const { data } = await axios.get(`${API}/notifications/expiring-sanctions`);
     return data;
+  },
+  getAdminNotifications: async () => {
+    const { data } = await axios.get(`${API}/notifications/admin`);
+    return data;
+  },
+  markAllRead: async () => {
+    const { data } = await axios.put(`${API}/notifications/admin/mark-read`);
+    return data;
   }
 };
 

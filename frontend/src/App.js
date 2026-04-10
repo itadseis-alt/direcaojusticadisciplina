@@ -104,7 +104,7 @@ function AppRoutes() {
       } />
       
       <Route path="/relatorios" element={
-        <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica']}>
+        <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior']}>
           <Reports />
         </ProtectedRoute>
       } />
