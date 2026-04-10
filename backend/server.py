@@ -16,7 +16,6 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
-import requests
 import asyncio
 import io
 import resend
@@ -61,47 +60,36 @@ def create_refresh_token(user_id: str) -> str:
     payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(days=7), "type": "refresh"}
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
 
-# Object Storage
-STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
-APP_NAME = "disciplina-fdtl"
-storage_key = None
+# Local File Storage
+import pathlib
 
-def init_storage():
-    global storage_key
-    if storage_key:
-        return storage_key
-    try:
-        resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-        resp.raise_for_status()
-        storage_key = resp.json()["storage_key"]
-        return storage_key
-    except Exception as e:
-        logger.error(f"Storage init failed: {e}")
-        return None
+UPLOAD_DIR = pathlib.Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+APP_NAME = "disciplina-fdtl"
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    if not key:
-        raise HTTPException(status_code=500, detail="Storage not available")
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data, timeout=120
-    )
-    resp.raise_for_status()
-    return resp.json()
+    """Save file to local filesystem"""
+    file_path = UPLOAD_DIR / path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_bytes(data)
+    return {"path": path}
 
 def get_object(path: str):
-    key = init_storage()
-    if not key:
-        raise HTTPException(status_code=500, detail="Storage not available")
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key}, timeout=60
-    )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+    """Read file from local filesystem"""
+    file_path = UPLOAD_DIR / path
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    
+    # Determine content type
+    ext = file_path.suffix.lower()
+    content_types = {
+        ".pdf": "application/pdf",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+    }
+    ct = content_types.get(ext, "application/octet-stream")
+    return file_path.read_bytes(), ct
 
 # Create the main app
 app = FastAPI(title="Sistema de Gestão Disciplinar - FALINTIL-FDTL")
@@ -1067,12 +1055,9 @@ async def startup():
         await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
         logger.info(f"Admin password updated")
     
-    # Initialize storage
-    try:
-        init_storage()
-        logger.info("Object storage initialized")
-    except Exception as e:
-        logger.error(f"Storage init failed: {e}")
+    # Ensure local upload directory exists
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    logger.info(f"Local file storage: {UPLOAD_DIR.resolve()}")
     
     # Seed demo data
     await seed_demo_data()

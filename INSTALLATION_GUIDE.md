@@ -13,7 +13,8 @@
 5. [PARTE 2A - Instalacao em Servidor (Linux)](#parte-2a---instalacao-em-servidor-linux)
 6. [PARTE 2B - Instalacao em Servidor (Windows)](#parte-2b---instalacao-em-servidor-windows)
 7. [Credenciais Padrao](#credenciais-padrao)
-8. [Backup e Restauracao](#backup-e-restauracao)
+8. [Armazenamento de Ficheiros](#armazenamento-de-ficheiros)
+9. [Backup e Restauracao](#backup-e-restauracao)
 8. [Solucao de Problemas](#solucao-de-problemas)
 
 ---
@@ -1315,31 +1316,68 @@ Apos a instalacao, o sistema cria automaticamente estes utilizadores:
 
 ---
 
+## Armazenamento de Ficheiros
+
+O sistema armazena **todos os ficheiros localmente** no servidor, dentro da pasta:
+
+```
+backend/uploads/
+```
+
+Estrutura de pastas criada automaticamente:
+```
+backend/uploads/
+  disciplina-fdtl/
+    fotos/          <-- Fotos dos membros
+    pdfs/           <-- Anexos PDF dos casos
+    despachos/      <-- Documentos de despacho
+    user-fotos/     <-- Fotos dos utilizadores
+```
+
+> IMPORTANTE: Nenhum ficheiro e enviado para a nuvem. Todos os dados (base de dados + ficheiros) ficam no servidor local.
+
+> IMPORTANTE: Inclua a pasta `uploads/` nos backups do sistema!
+
+---
+
 ## Backup e Restauracao
 
 ### Linux
 
 ```bash
-# Fazer backup
+# Fazer backup da base de dados
 mongodump --db disciplina_fdtl_prod --out /backup/$(date +%Y%m%d)
 
-# Restaurar backup
+# Fazer backup dos ficheiros anexados
+cp -r /home/disciplina/app/backend/uploads /backup/$(date +%Y%m%d)/uploads
+
+# Restaurar backup da base de dados
 mongorestore --db disciplina_fdtl_prod /backup/20260408/disciplina_fdtl_prod
+
+# Restaurar backup dos ficheiros
+cp -r /backup/20260408/uploads /home/disciplina/app/backend/uploads
 
 # Agendar backup diario (crontab)
 crontab -e
-# Adicione a linha:
+# Adicione as linhas:
 # 0 2 * * * mongodump --db disciplina_fdtl_prod --out /backup/$(date +\%Y\%m\%d)
+# 0 2 * * * cp -r /home/disciplina/app/backend/uploads /backup/$(date +\%Y\%m\%d)/uploads
 ```
 
 ### Windows
 
 ```powershell
-# Fazer backup
+# Fazer backup da base de dados
 mongodump --db disciplina_fdtl_prod --out C:\Backup\MongoDB\%date:~0,4%%date:~5,2%%date:~8,2%
 
-# Restaurar backup
+# Fazer backup dos ficheiros anexados
+xcopy /E /I C:\Apps\Disciplina\backend\uploads C:\Backup\Uploads\%date:~0,4%%date:~5,2%%date:~8,2%
+
+# Restaurar backup da base de dados
 mongorestore --db disciplina_fdtl_prod C:\Backup\MongoDB\20260408\disciplina_fdtl_prod
+
+# Restaurar backup dos ficheiros
+xcopy /E /I C:\Backup\Uploads\20260408 C:\Apps\Disciplina\backend\uploads
 ```
 
 Para agendar backup automatico no Windows:
