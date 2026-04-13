@@ -18,6 +18,9 @@ const ACTION_CONFIG = {
   reabriu: { icon: Clock, color: 'bg-orange-100', iconColor: 'text-orange-600', label: 'reabriu o caso' },
   anulou: { icon: AlertTriangle, color: 'bg-red-100', iconColor: 'text-red-600', label: 'anulou o caso' },
   'colocou em processo': { icon: Clock, color: 'bg-blue-100', iconColor: 'text-blue-600', label: 'colocou em processo o caso' },
+  'registrou notificação externa': { icon: FileText, color: 'bg-indigo-100', iconColor: 'text-indigo-600', label: 'registrou notificação externa' },
+  'editou notificação externa': { icon: Edit, color: 'bg-yellow-100', iconColor: 'text-yellow-600', label: 'editou notificação externa' },
+  'excluiu notificação externa': { icon: AlertTriangle, color: 'bg-red-100', iconColor: 'text-red-600', label: 'excluiu notificação externa' },
 };
 
 function timeAgo(dateStr) {

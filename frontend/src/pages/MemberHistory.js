@@ -123,6 +123,12 @@ export default function MemberHistory() {
                         <div className="text-right">
                           <span className="text-sm font-semibold text-zinc-700">{member.total_casos}</span>
                           <p className="text-xs text-zinc-500">caso(s)</p>
+                          {member.total_ne > 0 && (
+                            <>
+                              <span className="text-sm font-semibold text-indigo-700">{member.total_ne}</span>
+                              <p className="text-xs text-zinc-500">notif. ext.</p>
+                            </>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -174,7 +180,13 @@ export default function MemberHistory() {
                   ) : (
                     <div>
                       <span className="text-3xl font-black text-zinc-900">{memberHistory.summary.total_casos}</span>
-                      <p className="text-xs text-zinc-500">caso(s) registrado(s)</p>
+                      <p className="text-xs text-zinc-500">caso(s)</p>
+                      {memberHistory.summary.total_notif_externas > 0 && (
+                        <>
+                          <span className="text-xl font-black text-indigo-700">{memberHistory.summary.total_notif_externas}</span>
+                          <p className="text-xs text-zinc-500">notif. externa(s)</p>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -183,7 +195,7 @@ export default function MemberHistory() {
 
             {/* Summary Stats */}
             {!memberHistory.historico_limpo && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="bg-white border border-zinc-200 p-4 text-center">
                   <p className="text-2xl font-black text-[#166534]">{memberHistory.summary.processados}</p>
                   <p className="text-mono-label text-xs text-zinc-500">Processados</p>
@@ -203,6 +215,10 @@ export default function MemberHistory() {
                 <div className="bg-white border border-zinc-200 p-4 text-center">
                   <p className="text-2xl font-black text-[#991B1B]">{memberHistory.summary.anulados}</p>
                   <p className="text-mono-label text-xs text-zinc-500">Anulados</p>
+                </div>
+                <div className="bg-white border border-indigo-200 p-4 text-center">
+                  <p className="text-2xl font-black text-indigo-700">{memberHistory.summary.total_notif_externas || 0}</p>
+                  <p className="text-mono-label text-xs text-zinc-500">Notif. Externas</p>
                 </div>
               </div>
             )}
@@ -253,10 +269,59 @@ export default function MemberHistory() {
             ) : (
               <div className="bg-green-50 border border-green-200 p-8 text-center">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-green-800">Histórico Limpo</h3>
+                <h3 className="text-lg font-semibold text-green-800">Sem Casos Disciplinares</h3>
                 <p className="text-sm text-green-600 mt-1">
                   Este membro não possui casos disciplinares registrados no sistema.
                 </p>
+              </div>
+            )}
+
+            {/* Notificações Externas */}
+            {memberHistory.notificacoes_externas && memberHistory.notificacoes_externas.length > 0 && (
+              <div className="bg-white border border-indigo-200">
+                <div className="p-4 border-b border-indigo-200 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-500" />
+                  <h3 className="text-mono-label text-xs text-zinc-500">Notificações Externas</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>N.º</th>
+                        <th>Data Entrada</th>
+                        <th>Qualidade</th>
+                        <th>Tipo Caso</th>
+                        <th>Nu. Nuc</th>
+                        <th>Data Apresentação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {memberHistory.notificacoes_externas.map((ne) => (
+                        <tr key={ne.id}>
+                          <td>
+                            <Link 
+                              to={`/notificacoes-externas/${ne.id}`}
+                              className="font-mono text-sm font-semibold text-indigo-700 hover:underline"
+                            >
+                              NE-{ne.numero}
+                            </Link>
+                          </td>
+                          <td>{ne.data_entrada}</td>
+                          <td>
+                            <span className={`text-xs font-semibold px-2 py-1 border ${
+                              ne.qualidade === 'Suspeito' ? 'border-orange-300 text-orange-700 bg-orange-50' :
+                              ne.qualidade === 'Arguido' ? 'border-red-300 text-red-700 bg-red-50' :
+                              'border-blue-300 text-blue-700 bg-blue-50'
+                            }`}>{ne.qualidade}</span>
+                          </td>
+                          <td>{ne.tipo_caso || '-'}</td>
+                          <td className="font-mono text-sm">{ne.nu_nuc || '-'}</td>
+                          <td className="font-mono text-sm">{ne.data_apresenta || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

@@ -764,6 +764,9 @@ async def get_dashboard_stats(request: Request):
     ]
     unit_data = await db.cases.aggregate(unit_pipeline).to_list(10)
     
+    # Total notificações externas
+    total_notif_externas = await db.notificacoes_externas.count_documents({})
+    
     return {
         "total": total,
         "processados": processados,
@@ -773,6 +776,7 @@ async def get_dashboard_stats(request: Request):
         "anulados": anulados,
         "masculino": masculino,
         "feminino": feminino,
+        "total_notif_externas": total_notif_externas,
         "monthly": [{"month": m["_id"], "count": m["count"]} for m in monthly_data],
         "by_type": [{"tipo": t["_id"] or "Não especificado", "count": t["count"]} for t in type_data],
         "by_unit": [{"unidade": u["_id"] or "Não especificada", "count": u["count"]} for u in unit_data]
@@ -905,13 +909,147 @@ async def mark_admin_notifications_read(request: Request):
     await db.admin_notifications.update_many({"read": False}, {"$set": {"read": True}})
     return {"message": "Notificações marcadas como lidas"}
 
+# ===================== NOTIFICAÇÕES EXTERNAS =====================
+
+async def get_next_notif_number():
+    """Auto-increment notification number"""
+    last = await db.notificacoes_externas.find_one({}, sort=[("numero", -1)], projection={"numero": 1})
+    return (last["numero"] + 1) if last else 1
+
+@api_router.get("/notificacoes-externas")
+async def list_notificacoes(
+    request: Request,
+    page: int = 1, limit: int = 20,
+    nome: str = None, nim: str = None, posto: str = None,
+    componente: str = None, qualidade: str = None
+):
+    current_user = await get_current_user(request)
+    query = {}
+    if nome: query["nome_completo"] = {"$regex": nome, "$options": "i"}
+    if nim: query["nim"] = {"$regex": nim, "$options": "i"}
+    if posto and posto != "all": query["posto"] = posto
+    if componente and componente != "all": query["componente_unidade"] = componente
+    if qualidade and qualidade != "all": query["qualidade"] = qualidade
+
+    skip = (page - 1) * limit
+    notifs = await db.notificacoes_externas.find(query, {"_id": 0}).sort("numero", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.notificacoes_externas.count_documents(query)
+    return {"notificacoes": notifs, "total": total, "page": page, "pages": -(-total // limit)}
+
+@api_router.get("/notificacoes-externas/{notif_id}")
+async def get_notificacao(notif_id: str, request: Request):
+    await get_current_user(request)
+    notif = await db.notificacoes_externas.find_one({"id": notif_id}, {"_id": 0})
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada")
+    return notif
+
+@api_router.post("/notificacoes-externas")
+async def create_notificacao(request: Request):
+    current_user = await require_roles("super_admin", "admin", "pessoal_justica")(request)
+    body = await request.json()
+
+    numero = await get_next_notif_number()
+    notif = {
+        "id": str(uuid.uuid4()),
+        "numero": numero,
+        "data_entrada": body.get("data_entrada", ""),
+        "nim": body.get("nim", ""),
+        "nome_completo": body.get("nome_completo", ""),
+        "sexo": body.get("sexo", ""),
+        "posto": body.get("posto", ""),
+        "componente_unidade": body.get("componente_unidade", ""),
+        "qualidade": body.get("qualidade", ""),
+        "tipo_caso": body.get("tipo_caso", ""),
+        "nu_nuc": body.get("nu_nuc", ""),
+        "data_apresenta": body.get("data_apresenta", ""),
+        "horas": body.get("horas", ""),
+        "despacho_url": None,
+        "observacao": body.get("observacao", ""),
+        "foto_url": None,
+        "created_by": current_user["id"],
+        "created_by_nome": current_user["nome"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notificacoes_externas.insert_one(notif)
+    await log_activity(current_user["id"], current_user["nome"], "CREATE_NOTIF_EXTERNA", f"Notificação Externa #{numero} criada")
+    asyncio.create_task(create_admin_notification("registrou notificação externa", f"NE-{numero}", notif["nome_completo"], current_user["nome"], notif["id"]))
+    notif.pop("_id", None)
+    return notif
+
+@api_router.put("/notificacoes-externas/{notif_id}")
+async def update_notificacao(notif_id: str, request: Request):
+    current_user = await require_roles("super_admin", "admin", "pessoal_justica")(request)
+    body = await request.json()
+
+    notif = await db.notificacoes_externas.find_one({"id": notif_id}, {"_id": 0})
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada")
+
+    allowed_fields = ["data_entrada", "nim", "nome_completo", "sexo", "posto", "componente_unidade",
+                      "qualidade", "tipo_caso", "nu_nuc", "data_apresenta", "horas", "observacao"]
+    update_data = {k: v for k, v in body.items() if k in allowed_fields}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.notificacoes_externas.update_one({"id": notif_id}, {"$set": update_data})
+    await log_activity(current_user["id"], current_user["nome"], "UPDATE_NOTIF_EXTERNA", f"Notificação Externa #{notif['numero']} atualizada")
+    asyncio.create_task(create_admin_notification("editou notificação externa", f"NE-{notif['numero']}", notif["nome_completo"], current_user["nome"], notif["id"]))
+    return {"message": "Notificação atualizada"}
+
+@api_router.delete("/notificacoes-externas/{notif_id}")
+async def delete_notificacao(notif_id: str, request: Request):
+    current_user = await require_roles("super_admin")(request)
+
+    notif = await db.notificacoes_externas.find_one({"id": notif_id}, {"_id": 0})
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada")
+
+    await db.notificacoes_externas.delete_one({"id": notif_id})
+    await log_activity(current_user["id"], current_user["nome"], "DELETE_NOTIF_EXTERNA", f"Notificação Externa #{notif['numero']} excluída")
+    asyncio.create_task(create_admin_notification("excluiu notificação externa", f"NE-{notif['numero']}", notif["nome_completo"], current_user["nome"], notif["id"]))
+    return {"message": "Notificação excluída"}
+
+@api_router.post("/notificacoes-externas/{notif_id}/upload-despacho")
+async def upload_notif_despacho(notif_id: str, file: UploadFile = File(...), request: Request = None):
+    current_user = await require_roles("super_admin", "admin", "pessoal_justica")(request)
+    if file.size > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande (máx 20MB)")
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Formato inválido (aceito: PDF)")
+    path = f"{APP_NAME}/notif-despachos/{notif_id}/{uuid.uuid4()}.pdf"
+    data = await file.read()
+    result = put_object(path, data, "application/pdf")
+    await db.notificacoes_externas.update_one({"id": notif_id}, {"$set": {"despacho_url": result["path"]}})
+    return {"url": result["path"]}
+
+@api_router.post("/notificacoes-externas/{notif_id}/upload-foto")
+async def upload_notif_foto(notif_id: str, file: UploadFile = File(...), request: Request = None):
+    current_user = await require_roles("super_admin", "admin", "pessoal_justica")(request)
+    if file.size > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande (máx 5MB)")
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "jpg"
+    if ext not in ["jpg", "jpeg", "png"]:
+        raise HTTPException(status_code=400, detail="Formato inválido (aceito: JPG, PNG)")
+    path = f"{APP_NAME}/notif-fotos/{notif_id}/{uuid.uuid4()}.{ext}"
+    data = await file.read()
+    result = put_object(path, data, file.content_type or "image/jpeg")
+    await db.notificacoes_externas.update_one({"id": notif_id}, {"$set": {"foto_url": result["path"]}})
+    return {"url": result["path"]}
+
 # Member History - Get all cases for a specific member
 @api_router.get("/member-history/{nim}")
 async def get_member_history(nim: str, request: Request):
-    """Get complete case history for a member by NIM"""
+    """Get complete case history and external notifications for a member by NIM"""
     await get_current_user(request)
     
     cases = await db.cases.find(
+        {"nim": nim},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get notificações externas for the same NIM
+    ne_list = await db.notificacoes_externas.find(
         {"nim": nim},
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
@@ -923,33 +1061,35 @@ async def get_member_history(nim: str, request: Request):
         "arquivados": len([c for c in cases if c["status"] == "arquivado"]),
         "pendentes": len([c for c in cases if c["status"] == "pendente"]),
         "anulados": len([c for c in cases if c["status"] == "anulado"]),
-        "em_processo": len([c for c in cases if c["status"] == "em_processo"])
+        "em_processo": len([c for c in cases if c["status"] == "em_processo"]),
+        "total_notif_externas": len(ne_list)
     }
     
     return {
         "nim": nim,
         "cases": cases,
+        "notificacoes_externas": ne_list,
         "summary": summary,
-        "historico_limpo": len(cases) == 0
+        "historico_limpo": len(cases) == 0 and len(ne_list) == 0
     }
 
 # Search member by name for history
 @api_router.get("/member-search")
 async def search_member(request: Request, q: str = ""):
-    """Search for members by name or NIM"""
+    """Search for members by name or NIM across cases and notificações externas"""
     await get_current_user(request)
     
     if not q or len(q) < 2:
         return {"members": []}
     
-    # Find distinct members
-    pipeline = [
-        {"$match": {
-            "$or": [
-                {"refere_ao": {"$regex": q, "$options": "i"}},
-                {"nim": {"$regex": q, "$options": "i"}}
-            ]
-        }},
+    match_query = {"$or": [
+        {"refere_ao": {"$regex": q, "$options": "i"}},
+        {"nim": {"$regex": q, "$options": "i"}}
+    ]}
+    
+    # Search in cases
+    case_pipeline = [
+        {"$match": match_query},
         {"$group": {
             "_id": "$nim",
             "nome": {"$first": "$refere_ao"},
@@ -959,21 +1099,39 @@ async def search_member(request: Request, q: str = ""):
         }},
         {"$limit": 20}
     ]
+    case_results = await db.cases.aggregate(case_pipeline).to_list(20)
     
-    results = await db.cases.aggregate(pipeline).to_list(20)
+    # Search in notificações externas
+    ne_match = {"$or": [
+        {"nome_completo": {"$regex": q, "$options": "i"}},
+        {"nim": {"$regex": q, "$options": "i"}}
+    ]}
+    ne_pipeline = [
+        {"$match": ne_match},
+        {"$group": {
+            "_id": "$nim",
+            "nome": {"$first": "$nome_completo"},
+            "posto": {"$first": "$posto"},
+            "unidade": {"$first": "$componente_unidade"},
+            "total_ne": {"$sum": 1}
+        }},
+        {"$limit": 20}
+    ]
+    ne_results = await db.notificacoes_externas.aggregate(ne_pipeline).to_list(20)
     
-    return {
-        "members": [
-            {
-                "nim": r["_id"],
-                "nome": r["nome"],
-                "posto": r["posto"],
-                "unidade": r["unidade"],
-                "total_casos": r["total_casos"]
-            }
-            for r in results if r["_id"]
-        ]
-    }
+    # Merge results by NIM
+    merged = {}
+    for r in case_results:
+        if r["_id"]:
+            merged[r["_id"]] = {"nim": r["_id"], "nome": r["nome"], "posto": r["posto"], "unidade": r["unidade"], "total_casos": r["total_casos"], "total_ne": 0}
+    for r in ne_results:
+        if r["_id"]:
+            if r["_id"] in merged:
+                merged[r["_id"]]["total_ne"] = r["total_ne"]
+            else:
+                merged[r["_id"]] = {"nim": r["_id"], "nome": r["nome"], "posto": r["posto"], "unidade": r["unidade"], "total_casos": 0, "total_ne": r["total_ne"]}
+    
+    return {"members": list(merged.values())[:20]}
 
 # Background task to check and update expired sanctions
 async def check_expired_sanctions():

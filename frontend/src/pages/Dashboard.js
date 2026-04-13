@@ -172,6 +172,13 @@ export default function Dashboard() {
             icon={TrendingUp}
             subtitle="Casos processados"
           />
+          <StatCard
+            title="Notificações Externas"
+            value={stats?.total_notif_externas || 0}
+            icon={Users}
+            color="blue"
+            href="/notificacoes-externas"
+          />
         </div>
 
         {/* Charts Row */}

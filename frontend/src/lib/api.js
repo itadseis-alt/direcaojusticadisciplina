@@ -151,6 +151,46 @@ export const memberApi = {
   }
 };
 
+// Notificações Externas API
+export const notifExternaApi = {
+  list: async (params = {}) => {
+    const { data } = await axios.get(`${API}/notificacoes-externas`, { params });
+    return data;
+  },
+  get: async (id) => {
+    const { data } = await axios.get(`${API}/notificacoes-externas/${id}`);
+    return data;
+  },
+  create: async (payload) => {
+    const { data } = await axios.post(`${API}/notificacoes-externas`, payload);
+    return data;
+  },
+  update: async (id, payload) => {
+    const { data } = await axios.put(`${API}/notificacoes-externas/${id}`, payload);
+    return data;
+  },
+  delete: async (id) => {
+    const { data } = await axios.delete(`${API}/notificacoes-externas/${id}`);
+    return data;
+  },
+  uploadDespacho: async (id, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await axios.post(`${API}/notificacoes-externas/${id}/upload-despacho`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  },
+  uploadFoto: async (id, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await axios.post(`${API}/notificacoes-externas/${id}/upload-foto`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  }
+};
+
 // Activity Logs API
 export const logsApi = {
   list: async (page = 1, limit = 50) => {

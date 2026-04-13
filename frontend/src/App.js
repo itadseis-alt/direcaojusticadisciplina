@@ -15,6 +15,9 @@ import ActivityLogs from "@/pages/ActivityLogs";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import MemberHistory from "@/pages/MemberHistory";
+import NotificacoesExternas from "@/pages/NotificacoesExternas";
+import NotifExternaForm from "@/pages/NotifExternaForm";
+import NotifExternaDetail from "@/pages/NotifExternaDetail";
 
 // Protected Route Component
 function ProtectedRoute({ children, requiredRoles = [] }) {
@@ -112,6 +115,30 @@ function AppRoutes() {
       <Route path="/historico" element={
         <ProtectedRoute>
           <MemberHistory />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/notificacoes-externas" element={
+        <ProtectedRoute>
+          <NotificacoesExternas />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/notificacoes-externas/nova" element={
+        <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica']}>
+          <NotifExternaForm />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/notificacoes-externas/:id" element={
+        <ProtectedRoute>
+          <NotifExternaDetail />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/notificacoes-externas/:id/editar" element={
+        <ProtectedRoute requiredRoles={['super_admin', 'admin', 'pessoal_justica']}>
+          <NotifExternaForm />
         </ProtectedRoute>
       } />
       

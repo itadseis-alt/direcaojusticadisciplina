@@ -12,7 +12,8 @@ import {
   Menu,
   Plus,
   BarChart3,
-  History
+  History,
+  Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ import {
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
   { path: '/casos', label: 'Casos', icon: FileText, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
+  { path: '/notificacoes-externas', label: 'Notificação Externa', icon: Bell, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
   { path: '/historico', label: 'Histórico', icon: History, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
   { path: '/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['super_admin', 'admin', 'pessoal_justica', 'pessoal_superior'] },
   { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['super_admin', 'admin'] },
