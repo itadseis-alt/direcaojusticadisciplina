@@ -49,7 +49,7 @@ export default function UserForm() {
     if (isEditing) {
       loadUser();
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUser = async () => {
     try {

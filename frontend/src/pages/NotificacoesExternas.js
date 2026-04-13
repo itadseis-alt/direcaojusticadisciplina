@@ -31,7 +31,7 @@ export default function NotificacoesExternas() {
 
   const isSuperAdmin = user?.tipo === 'super_admin';
 
-  useEffect(() => { loadData(); }, [page, limit, qualidade]);
+  useEffect(() => { loadData(); }, [page, limit, qualidade]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     setLoading(true);

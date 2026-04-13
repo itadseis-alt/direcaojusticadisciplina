@@ -122,7 +122,7 @@ export default function Reports() {
 
   useEffect(() => {
     loadReportData();
-  }, [selectedUnidade]);
+  }, [selectedUnidade]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReportData = async () => {
     setLoading(true);

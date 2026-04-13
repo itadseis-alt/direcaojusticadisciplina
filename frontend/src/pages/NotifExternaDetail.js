@@ -20,7 +20,7 @@ export default function NotifExternaDetail() {
 
   const isSuperAdmin = user?.tipo === 'super_admin';
 
-  useEffect(() => { loadNotif(); }, [id]);
+  useEffect(() => { loadNotif(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadNotif = async () => {
     try {

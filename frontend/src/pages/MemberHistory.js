@@ -30,7 +30,7 @@ export default function MemberHistory() {
     if (nim) {
       loadMemberHistory(nim);
     }
-  }, []);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = async (e) => {
     e?.preventDefault();

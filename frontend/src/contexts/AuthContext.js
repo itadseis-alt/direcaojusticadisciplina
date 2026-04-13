@@ -21,10 +21,23 @@ function formatApiErrorDetail(detail) {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); // null = checking, false = not authenticated, object = authenticated
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const timeoutRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
+
+  const logout = useCallback(async () => {
+    try {
+      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    }
+  }, []);
 
   const resetTimeout = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -35,14 +48,13 @@ export function AuthProvider({ children }) {
     
     if (user) {
       timeoutRef.current = setTimeout(() => {
-        // Check if user has been inactive
         const inactiveTime = Date.now() - lastActivityRef.current;
         if (inactiveTime >= SESSION_TIMEOUT) {
           logout();
         }
       }, SESSION_TIMEOUT);
     }
-  }, [user]);
+  }, [user, logout]);
 
   // Activity listeners
   useEffect(() => {
@@ -52,13 +64,11 @@ export function AuthProvider({ children }) {
       resetTimeout();
     };
 
-    // Listen for user activity
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
     events.forEach(event => {
       window.addEventListener(event, handleActivity);
     });
 
-    // Initial timeout setup
     resetTimeout();
 
     return () => {
@@ -99,19 +109,6 @@ export function AuthProvider({ children }) {
     } catch (error) {
       const message = formatApiErrorDetail(error.response?.data?.detail) || error.message;
       return { success: false, error: message };
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(false);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
     }
   };
 

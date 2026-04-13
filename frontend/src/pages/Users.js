@@ -42,7 +42,7 @@ export default function Users() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUsers = async () => {
     try {

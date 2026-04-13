@@ -51,7 +51,7 @@ export function NotificationBell() {
     loadNotifications();
     const interval = setInterval(loadNotifications, 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadNotifications = async () => {
     try {

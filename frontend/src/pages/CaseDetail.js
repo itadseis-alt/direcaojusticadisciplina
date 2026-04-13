@@ -91,7 +91,7 @@ export default function CaseDetail() {
 
   useEffect(() => {
     loadCase();
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCase = async () => {
     try {

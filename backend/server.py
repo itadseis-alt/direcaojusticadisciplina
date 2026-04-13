@@ -1277,36 +1277,42 @@ async def seed_demo_data():
             "Teresa Lopes", "Isabel Ferreira", "Ricardo Belo", "Armando Cruz"
         ]
         
-        import random
+        import secrets
+        
+        def _choice(lst):
+            return lst[secrets.randbelow(len(lst))]
+        
+        def _randint(a, b):
+            return a + secrets.randbelow(b - a + 1)
         
         for i in range(15):
-            case_date = datetime.now(timezone.utc) - timedelta(days=random.randint(1, 180))
-            status = random.choice(status_list)
+            case_date = datetime.now(timezone.utc) - timedelta(days=_randint(1, 180))
+            status = _choice(status_list)
             
             case = {
                 "id": str(uuid.uuid4()),
                 "numero": f"CASO-{datetime.now().year}-{str(i + 1).zfill(5)}",
                 "data_registo": case_date.strftime("%Y-%m-%d"),
-                "hora": f"{random.randint(8, 18):02d}:{random.randint(0, 59):02d}",
-                "tipo_caso": random.choice(tipos_caso),
-                "refere_ao": random.choice(nomes),
-                "posto": random.choice(postos),
-                "componente_unidade": random.choice(unidades),
+                "hora": f"{_randint(8, 18):02d}:{_randint(0, 59):02d}",
+                "tipo_caso": _choice(tipos_caso),
+                "refere_ao": _choice(nomes),
+                "posto": _choice(postos),
+                "componente_unidade": _choice(unidades),
                 "requerente": "Comando",
-                "telefone": f"77{random.randint(1000000, 9999999)}",
-                "nim": f"F{random.randint(10000, 99999)}",
-                "sexo": random.choice(["M", "M", "M", "M", "F"]),
+                "telefone": f"77{_randint(1000000, 9999999)}",
+                "nim": f"F{_randint(10000, 99999)}",
+                "sexo": _choice(["M", "M", "M", "M", "F"]),
                 "status": status,
                 "registrado_por": "Super Administrador",
                 "registrado_por_id": "system",
                 "foto_membro_url": None,
                 "anexo_pdf_url": None,
                 "despacho_url": None,
-                "tipo_sancao": random.choice(sancoes) if status == "processado" else None,
+                "tipo_sancao": _choice(sancoes) if status == "processado" else None,
                 "data_despacho": case_date.strftime("%Y-%m-%d") if status in ["processado", "arquivado"] else None,
                 "data_inicio": case_date.strftime("%Y-%m-%d") if status == "processado" else None,
-                "data_fim": (case_date + timedelta(days=random.randint(5, 30))).strftime("%Y-%m-%d") if status == "processado" else None,
-                "oficial_instrutor": random.choice(["Maj. Silva", "Cap. Costa", "Ten. Ramos"]) if status in ["processado", "em_processo"] else None,
+                "data_fim": (case_date + timedelta(days=_randint(5, 30))).strftime("%Y-%m-%d") if status == "processado" else None,
+                "oficial_instrutor": _choice(["Maj. Silva", "Cap. Costa", "Ten. Ramos"]) if status in ["processado", "em_processo"] else None,
                 "observacao": "Caso registrado para demonstração" if status == "processado" else None,
                 "created_at": case_date.isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()

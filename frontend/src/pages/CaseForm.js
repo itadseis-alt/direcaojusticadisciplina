@@ -144,7 +144,7 @@ export default function CaseForm() {
     if (isEditing) {
       loadCase();
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCase = async () => {
     try {

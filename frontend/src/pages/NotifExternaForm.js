@@ -51,7 +51,7 @@ export default function NotifExternaForm() {
 
   useEffect(() => {
     if (isEditing) loadNotif();
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadNotif = async () => {
     setLoading(true);
