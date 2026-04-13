@@ -1,93 +1,53 @@
 # PRD - Sistema de Gestão Disciplinar FALINTIL-FDTL
 
 ## Original Problem Statement
-Criar um sistema de Gestão Disciplinar completo baseado no documento PDF fornecido para FALINTIL-FDTL (Forças de Defesa de Timor-Leste).
+Criar um sistema de Gestão Disciplinar completo para a FALINTIL-FDTL baseado no documento PDF fornecido. O sistema deve ter autenticação, diferentes níveis de acesso (super_admin, admin, pessoal_justica, pessoal_superior), gestão de casos disciplinares, relatórios, impressão com logo oficial, notificações por e-mail e na plataforma de sanções a vencer (5 dias antes), movimentação automática de casos com sanção expirada para "Anulado", histórico de membros, timeout de sessão de 4 minutos, e relatórios personalizados por unidade.
 
-## User Personas
-1. **Super Admin** - Acesso total ao sistema (CRUD usuários, casos, logs, backup)
-2. **Admin** - Pode criar usuários (exceto super_admin), gerenciar casos
-3. **Pessoal Justiça** - Pode registrar e editar casos
-4. **Pessoal Superior** - Apenas visualização de casos (somente leitura)
+## Architecture
+- Frontend: React + Tailwind CSS + Shadcn UI
+- Backend: FastAPI + MongoDB (Motor Async)
+- Auth: JWT with bcrypt, 4-minute inactivity timeout
+- Storage: Local filesystem (backend/uploads/)
+- Background Tasks: APScheduler for auto-expiration
 
-## Core Requirements
-- Autenticação JWT com 4 níveis de acesso
-- Dashboard com estatísticas e gráficos
-- Gestão de usuários com permissões por role
-- Registro de casos disciplinares com campos completos
-- Status de casos: Pendente, Em Processo, Processado, Arquivado, Anulado
-- Sanções disciplinares
-- Upload de arquivos (fotos, PDFs, despachos)
-- Log de atividades
-- Exportação para CSV/Excel
-- Impressão de documentos em A4
+## Completed Features
+- [x] JWT Authentication with 4 roles and 4-minute session timeout
+- [x] CRUD for Disciplinary Cases with complex filtering, PDF attachments, status processing
+- [x] Custom Dropdowns: Ranks (Posto), Units (Componente/Unidade), Case Types, Sanction Types
+- [x] Print Layouts: A4 with F-FDTL Official Logo and custom headers
+- [x] Branding: Login page, logos, footers
+- [x] Automated Sanction Management: 5-day notifications, auto-move to "Anulado"
+- [x] Member History: Search by NIM/Name, historical records (cases + NE)
+- [x] Interactive Dashboard: Clickable stat cards with filtered routing
+- [x] Reports: Unit-based filtering, CSV/Excel export, charts, temporal evolution (monthly/yearly)
+- [x] Pagination on Cases list (10/50/100 per page)
+- [x] Admin Notifications: Bell with tabs (Ações + Sanções) for case and NE actions
+- [x] Case processed can change to archived/pending while keeping history
+- [x] Pessoal Superior access to Reports
+- [x] Local file storage (no cloud dependencies)
+- [x] CORS configuration for LAN access with multiple IPs
+- [x] **Notificações Externas** (External Notifications) - Full CRUD module with:
+  - Auto-incrementing number
+  - All required fields (Data Entrada, NIM, Nome, Sexo, Posto, Unidade, Qualidade, Tipo Caso, Nu. Nuc, Data Apresenta, Horas, Despacho PDF, Observação, Foto)
+  - Dashboard card integration
+  - Admin notification integration
+  - Member History integration
+  - Role-based permissions (SuperAdmin: full, Admin/Justiça: create/edit, Superior: read-only)
+  - Password-confirmed edit/delete operations
 
-## What's Been Implemented
+## Pending / Backlog
+- [ ] P1: API Integration with PMS (Personal Management System)
+- [ ] P2: Advanced report filters
+- [ ] P2: Real email integration (currently simulated)
+- [ ] P3: Backend refactoring (split server.py into routers/models/services)
 
-### 2026-04-08 (Initial Release)
-- [x] Autenticação JWT com bcrypt
-- [x] CRUD de usuários com permissões por role
-- [x] CRUD de casos disciplinares
-- [x] Upload de arquivos via Object Storage
-- [x] Dashboard com estatísticas agregadas
-- [x] Log de atividades
-- [x] Exportação CSV/Excel
-- [x] Seed de dados demo (15 casos, 4 usuários)
-
-### 2026-04-08 (Update 1)
-- [x] Posto atualizado com hierarquia militar completa
-- [x] Componente/Unidade atualizado com 15 unidades F-FDTL
-- [x] Campo "Telefone do Requerente" adicionado ao formulário
-- [x] Campo "Anexar PDF" no formulário de processamento
-- [x] Impressão em formato A4 com cabeçalho oficial
-
-### 2026-04-08 (Update 2)
-- [x] Logo oficial F-FDTL na página de login e sidebar
-- [x] Footer "F-FDTL: Divisão de Comunicações e Sistema de Informação @2026"
-- [x] Session timeout de 4 minutos de inatividade
-- [x] Página de Relatórios por Unidade com gráficos
-- [x] Notificações por email quando status do caso muda
-
-### 2026-04-08 (Update 3) - Sistema de Notificações e Histórico
-- [x] **Notificações de Sanções a Vencer**: 5 dias antes da data_fim, o sistema notifica todos os usuários
-- [x] **Sino de Notificações** no header mostrando sanções prestes a terminar
-- [x] **Mudança Automática de Status**: Quando data_fim chega, caso muda de "Processado" para "Anulado" automaticamente
-- [x] **Verificação Periódica**: Sistema verifica sanções expiradas a cada hora
-- [x] **Página de Histórico de Membros**: Buscar membro por nome ou NIM e ver todo o histórico de casos
-- [x] **Histórico Limpo**: Se membro não tem casos, sistema indica "Histórico Limpo"
-- [x] **Resumo por Membro**: Total de casos, processados, pendentes, etc.
-
-## Documentation
-- `/app/INSTALLATION_GUIDE.md` - Guia completo de instalação
-
-## Technical Stack
-- **Backend**: FastAPI, MongoDB, PyJWT, bcrypt, Resend (email)
-- **Frontend**: React, Tailwind CSS, Shadcn UI, Recharts
-- **Storage**: Emergent Object Storage
-- **Auth**: JWT (httpOnly cookies) com timeout de 4 min
-
-## Environment Variables
-### Backend (.env)
-- MONGO_URL
-- DB_NAME
-- JWT_SECRET
-- ADMIN_EMAIL
-- ADMIN_PASSWORD
-- FRONTEND_URL
-- RESEND_API_KEY (opcional, para notificações email)
-- EMAIL_FROM
+## Key Files
+- /app/backend/server.py (all backend logic)
+- /app/frontend/src/pages/ (all page components)
+- /app/frontend/src/lib/api.js (API layer)
+- /app/frontend/src/contexts/AuthContext.js (auth state)
+- /app/frontend/src/components/Layout.js (navigation)
+- /app/INSTALLATION_GUIDE.md (full installation guide)
 
 ## Test Credentials
-- Super Admin: superadmin@falintil.tl / Admin@2024
-- Admin: admin@falintil.tl / Demo@2024
-- Pessoal Justiça: justica@falintil.tl / Demo@2024
-- Pessoal Superior: superior@falintil.tl / Demo@2024
-
-## Automações Implementadas
-1. **Verificação de Sanções Expiradas**: A cada hora, sistema verifica casos processados com data_fim <= hoje e move para "Anulado"
-2. **Notificações de 5 dias**: Todos os casos com sanções terminando em até 5 dias aparecem no sino de notificações
-3. **Log Automático**: Todas as alterações de status são registradas no log de atividades
-
-## Integration Ready
-O sistema está preparado para integração com:
-- PMS (Personal Management System) - via API REST
-- Outros sistemas militares - via endpoints /api/
+See /app/memory/test_credentials.md
