@@ -1174,13 +1174,46 @@ async def check_expired_sanctions():
 # Include the router in the main app
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=[o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()],
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Dynamic CORS for local/LAN deployments
+import re
+_LAN_ORIGIN_RE = re.compile(
+    r'^https?://(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$'
 )
+cors_origins_env = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+_configured_origins = set(o.strip() for o in cors_origins_env.split(",") if o.strip())
+
+def _get_all_origins(origin: str = None):
+    """Return list of allowed origins, dynamically including LAN origins"""
+    origins = list(_configured_origins)
+    if origin and _LAN_ORIGIN_RE.match(origin) and origin not in origins:
+        origins.append(origin)
+    return origins
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class LANCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        origin = request.headers.get("origin", "")
+        is_allowed = origin in _configured_origins or bool(_LAN_ORIGIN_RE.match(origin))
+        
+        if request.method == "OPTIONS":
+            response = Response(status_code=200)
+            if is_allowed:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+                response.headers["Access-Control-Max-Age"] = "600"
+            return response
+        
+        response = await call_next(request)
+        if is_allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
+app.add_middleware(LANCORSMiddleware)
 
 # Startup event
 @app.on_event("startup")

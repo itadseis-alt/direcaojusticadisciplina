@@ -543,9 +543,8 @@ FRONTEND_URL=http://192.168.1.100:3000
 CORS_ORIGINS=http://192.168.1.100:3000,http://localhost:3000
 ```
 
-> Mantemos `http://localhost:3000` no CORS_ORIGINS para que o acesso local tambem continue a funcionar.
-> IMPORTANTE: O CORS_ORIGINS aceita multiplos enderecos separados por virgula. Se tiver varios computadores com IPs diferentes a aceder, adicione todos. Exemplo:
-> `CORS_ORIGINS=http://192.168.1.100:3000,http://192.168.1.101:3000,http://localhost:3000`
+> O sistema aceita automaticamente qualquer IP de rede local (10.x.x.x, 192.168.x.x, 172.16-31.x.x, localhost) no CORS.
+> O CORS_ORIGINS e apenas necessario se quiser adicionar origens externas especificas.
 
 ---
 
