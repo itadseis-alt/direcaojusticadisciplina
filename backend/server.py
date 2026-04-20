@@ -457,9 +457,11 @@ async def update_password(user_id: str, request: Request):
 async def create_case(case_data: CaseCreate, request: Request):
     current_user = await require_roles("super_admin", "admin", "pessoal_justica")(request)
     
-    # Generate case number
-    count = await db.cases.count_documents({})
-    case_number = f"CASO-{datetime.now().year}-{str(count + 1).zfill(5)}"
+    # Generate case number (use max numero to avoid collisions after deletions)
+    pipeline = [{"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$numero", "-"]}, 2]}}}}, {"$sort": {"num": -1}}, {"$limit": 1}]
+    result = await db.cases.aggregate(pipeline).to_list(1)
+    next_num = (result[0]["num"] + 1) if result else 1
+    case_number = f"CASO-{datetime.now().year}-{str(next_num).zfill(5)}"
     
     case = {
         "id": str(uuid.uuid4()),
