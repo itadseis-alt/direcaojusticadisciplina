@@ -24,6 +24,7 @@ export default function NotificacoesExternas() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get('nome') || '');
   const [qualidade, setQualidade] = useState(searchParams.get('qualidade') || 'all');
+  const [status, setStatus] = useState(searchParams.get('status') || 'all');
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [limit, setLimit] = useState(10);
   const [deleteId, setDeleteId] = useState(null);
@@ -31,7 +32,7 @@ export default function NotificacoesExternas() {
 
   const isSuperAdmin = user?.tipo === 'super_admin';
 
-  useEffect(() => { loadData(); }, [page, limit, qualidade]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadData(); }, [page, limit, qualidade, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     setLoading(true);
@@ -39,6 +40,7 @@ export default function NotificacoesExternas() {
       const params = { page, limit };
       if (search) params.nome = search;
       if (qualidade && qualidade !== 'all') params.qualidade = qualidade;
+      if (status && status !== 'all') params.status = status;
       const data = await notifExternaApi.list(params);
       setNotificacoes(data.notificacoes || []);
       setTotal(data.total || 0);
@@ -103,6 +105,16 @@ export default function NotificacoesExternas() {
               <SelectContent>
                 <SelectItem value="all">Todas Qualidades</SelectItem>
                 {qualidades.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+              <SelectTrigger className="w-[180px] rounded-none" data-testid="ne-status-filter">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                <SelectItem value="aguarde">Aguarde</SelectItem>
+                <SelectItem value="apresentacao_concluida">Concluída</SelectItem>
               </SelectContent>
             </Select>
             <Button type="submit" variant="outline" className="rounded-none" data-testid="ne-search-btn">

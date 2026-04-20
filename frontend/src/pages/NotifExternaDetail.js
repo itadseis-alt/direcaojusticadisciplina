@@ -116,6 +116,7 @@ export default function NotifExternaDetail() {
                 <div><p className="text-mono-label text-xs text-zinc-400">POSTO</p><p>{notif.posto}</p></div>
                 <div><p className="text-mono-label text-xs text-zinc-400">SEXO</p><p>{notif.sexo === 'M' ? 'Masculino' : 'Feminino'}</p></div>
                 <div><p className="text-mono-label text-xs text-zinc-400">UNIDADE</p><p>{notif.componente_unidade}</p></div>
+                <div><p className="text-mono-label text-xs text-zinc-400">TELEFONE</p><p className="font-mono">{notif.telefone || '-'}</p></div>
                 <div>
                   <p className="text-mono-label text-xs text-zinc-400">QUALIDADE</p>
                   <span className={`text-xs font-semibold px-2 py-1 border ${

@@ -38,6 +38,7 @@ function timeAgo(dateStr) {
 
 export function NotificationBell() {
   const [sanctionNotifs, setSanctionNotifs] = useState([]);
+  const [neNotifs, setNeNotifs] = useState([]);
   const [adminNotifs, setAdminNotifs] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,7 @@ export function NotificationBell() {
   const { user } = useAuth();
 
   const isAdmin = user?.tipo === 'super_admin' || user?.tipo === 'admin';
+  const isJustica = user?.tipo === 'pessoal_justica';
 
   useEffect(() => {
     loadNotifications();
@@ -57,6 +59,9 @@ export function NotificationBell() {
     try {
       const sanctionData = await notificationsApi.getExpiringSanctions();
       setSanctionNotifs(sanctionData.notifications || []);
+
+      const neData = await notificationsApi.getExpiringNE();
+      setNeNotifs(neData.notifications || []);
 
       if (isAdmin) {
         const adminData = await notificationsApi.getAdminNotifications();
@@ -80,7 +85,7 @@ export function NotificationBell() {
     }
   };
 
-  const totalCount = (isAdmin ? unreadCount : 0) + sanctionNotifs.length;
+  const totalCount = (isAdmin ? unreadCount : 0) + sanctionNotifs.length + neNotifs.length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -125,6 +130,15 @@ export function NotificationBell() {
             >
               Sanções {sanctionNotifs.length > 0 && <span className="ml-1 bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{sanctionNotifs.length}</span>}
             </button>
+            <button
+              onClick={() => setTab('apresentacao')}
+              className={`flex-1 text-xs font-medium py-2.5 border-b-2 transition-colors ${
+                tab === 'apresentacao' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'
+              }`}
+              data-testid="tab-apresentacao"
+            >
+              Apresent. {neNotifs.length > 0 && <span className="ml-1 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{neNotifs.length}</span>}
+            </button>
           </div>
         )}
 
@@ -161,7 +175,7 @@ export function NotificationBell() {
                           return (
                             <Link
                               key={notif.id}
-                              to={`/casos/${notif.case_id}`}
+                              to={(notif.case_numero?.startsWith('NE-') || notif.action?.includes('notificação externa')) ? `/notificacoes-externas/${notif.case_id}` : `/casos/${notif.case_id}`}
                               onClick={() => setOpen(false)}
                               className={`block p-3 hover:bg-zinc-50 transition-colors ${!notif.read ? 'bg-blue-50/40' : ''}`}
                               data-testid={`admin-notif-${notif.id}`}
@@ -250,6 +264,44 @@ export function NotificationBell() {
                       <p className="text-[11px] text-zinc-500 text-center">
                         Sanções que terminam serão movidas automaticamente para "Anulado"
                       </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* NE Presentations Tab */}
+              {tab === 'apresentacao' && (
+                <>
+                  {neNotifs.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Bell className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                      <p className="text-sm text-zinc-500">Nenhuma apresentação a vencer</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-zinc-100">
+                      {neNotifs.map((ne) => (
+                        <Link
+                          key={ne.id}
+                          to={`/notificacoes-externas/${ne.id}`}
+                          onClick={() => setOpen(false)}
+                          className="block p-3 hover:bg-zinc-50 transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-1.5 ${ne.dias_restantes === 0 ? 'bg-red-100' : 'bg-indigo-100'}`}>
+                              <Clock className={`w-3.5 h-3.5 ${ne.dias_restantes === 0 ? 'text-red-600' : 'text-indigo-600'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-zinc-900 truncate">{ne.nome_completo}</p>
+                              <p className="text-xs text-zinc-500 mt-0.5">NE-{ne.numero} - {ne.posto}</p>
+                              <p className={`text-xs font-semibold mt-0.5 ${
+                                ne.dias_restantes === 0 ? 'text-red-600' : ne.dias_restantes <= 2 ? 'text-orange-600' : 'text-indigo-600'
+                              }`}>
+                                {ne.dias_restantes === 0 ? 'Apresentação HOJE!' : ne.dias_restantes === 1 ? 'Apresentação AMANHÃ' : `Apresentação em ${ne.dias_restantes} dias (${ne.data_apresenta})`}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </>

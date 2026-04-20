@@ -85,9 +85,11 @@ export default function CaseDetail() {
     data_inicio: '',
     data_fim: '',
     oficial_instrutor: '',
-    observacao: ''
+    observacao: '',
+    origem_anexo: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [origemAnexo, setOrigemAnexo] = useState('');
 
   useEffect(() => {
     loadCase();
@@ -184,10 +186,11 @@ export default function CaseDetail() {
         const result = await casesApi.uploadDespacho(id, despachoFile);
         despachoUrl = result.url;
       }
-      await casesApi.updateStatus(id, selectedStatus, despachoUrl);
+      await casesApi.updateStatus(id, selectedStatus, despachoUrl, origemAnexo || null);
       toast.success('Status atualizado com sucesso');
       setStatusDialogOpen(false);
       setDespachoFile(null);
+      setOrigemAnexo('');
       loadCase();
     } catch (error) {
       console.error('Status update error:', error);
@@ -478,6 +481,12 @@ export default function CaseDetail() {
                 <p className="text-mono-label text-xs text-zinc-500">Oficial Instrutor</p>
                 <p className="text-zinc-900">{caso.oficial_instrutor || '-'}</p>
               </div>
+              {caso.origem_anexo && (
+                <div className="col-span-2">
+                  <p className="text-mono-label text-xs text-zinc-500">Origem do Anexo</p>
+                  <p className="text-zinc-900">{caso.origem_anexo}</p>
+                </div>
+              )}
               <div className="col-span-2">
                 <p className="text-mono-label text-xs text-zinc-500">Observação</p>
                 <p className="text-zinc-900">{caso.observacao || '-'}</p>
@@ -634,6 +643,17 @@ export default function CaseDetail() {
             </div>
 
             <div className="space-y-2">
+              <Label>Origem do Anexo</Label>
+              <Input
+                value={processData.origem_anexo}
+                onChange={(e) => setProcessData(p => ({...p, origem_anexo: e.target.value}))}
+                placeholder="Ex: Tribunal, Comando, etc."
+                className="rounded-none"
+                data-testid="process-origem-anexo"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Anexar Documento (PDF)</Label>
               <Input
                 type="file"
@@ -677,16 +697,28 @@ export default function CaseDetail() {
           
           <div className="space-y-4 py-4">
             {(selectedStatus === 'arquivado' || selectedStatus === 'pendente') && (
-              <div className="space-y-2">
-                <Label>Despacho (PDF)</Label>
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setDespachoFile(e.target.files[0])}
-                  className="rounded-none"
-                />
-                <p className="text-xs text-zinc-500">Anexe o despacho relacionado (opcional)</p>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label>Origem do Anexo</Label>
+                  <Input
+                    value={origemAnexo}
+                    onChange={(e) => setOrigemAnexo(e.target.value)}
+                    placeholder="Ex: Tribunal, Comando, etc."
+                    className="rounded-none"
+                    data-testid="status-origem-anexo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Despacho (PDF)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setDespachoFile(e.target.files[0])}
+                    className="rounded-none"
+                  />
+                  <p className="text-xs text-zinc-500">Anexe o despacho relacionado (opcional)</p>
+                </div>
+              </>
             )}
           </div>
           

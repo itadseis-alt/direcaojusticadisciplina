@@ -44,7 +44,7 @@ export default function NotifExternaForm() {
   const [form, setForm] = useState({
     data_entrada: '', nim: '', nome_completo: '', sexo: '', posto: '',
     componente_unidade: '', qualidade: '', tipo_caso: '', nu_nuc: '',
-    data_apresenta: '', horas: '', observacao: ''
+    data_apresenta: '', horas: '', observacao: '', telefone: ''
   });
   const [existingDespacho, setExistingDespacho] = useState(null);
   const [existingFoto, setExistingFoto] = useState(null);
@@ -69,7 +69,8 @@ export default function NotifExternaForm() {
         nu_nuc: data.nu_nuc || '',
         data_apresenta: data.data_apresenta || '',
         horas: data.horas || '',
-        observacao: data.observacao || ''
+        observacao: data.observacao || '',
+        telefone: data.telefone || ''
       });
       setExistingDespacho(data.despacho_url);
       setExistingFoto(data.foto_url);
@@ -168,6 +169,14 @@ export default function NotifExternaForm() {
             <Input placeholder="Nome completo (sem números)" value={form.nome_completo}
               onChange={(e) => handleChange('nome_completo', e.target.value.replace(/[0-9]/g, ''))}
               className="rounded-none" data-testid="ne-nome" />
+          </div>
+
+          {/* Telefone */}
+          <div>
+            <Label>Telefone</Label>
+            <Input placeholder="77000000" value={form.telefone}
+              onChange={(e) => handleChange('telefone', e.target.value)}
+              className="rounded-none font-mono" data-testid="ne-telefone" />
           </div>
 
           {/* Row 2 */}

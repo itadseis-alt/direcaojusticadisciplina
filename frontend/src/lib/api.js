@@ -70,8 +70,10 @@ export const casesApi = {
     const { data } = await axios.put(`${API}/cases/${id}`, caseData);
     return data;
   },
-  updateStatus: async (id, status, despachoUrl = null) => {
-    const { data } = await axios.put(`${API}/cases/${id}/status`, { status, despacho_url: despachoUrl });
+  updateStatus: async (id, status, despachoUrl = null, origemAnexo = null) => {
+    const payload = { status, despacho_url: despachoUrl };
+    if (origemAnexo) payload.origem_anexo = origemAnexo;
+    const { data } = await axios.put(`${API}/cases/${id}/status`, payload);
     return data;
   },
   process: async (id, processData) => {
@@ -131,6 +133,10 @@ export const notificationsApi = {
   },
   getAdminNotifications: async () => {
     const { data } = await axios.get(`${API}/notifications/admin`);
+    return data;
+  },
+  getExpiringNE: async () => {
+    const { data } = await axios.get(`${API}/notifications/expiring-ne`);
     return data;
   },
   markAllRead: async () => {

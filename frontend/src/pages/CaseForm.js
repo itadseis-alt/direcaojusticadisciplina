@@ -111,7 +111,8 @@ const tiposCasoGroups = {
   ],
   'Outros': [
     'Adultério',
-    'Obstrução'
+    'Obstrução',
+    'Outros'
   ]
 };
 

@@ -172,12 +172,30 @@ export default function Dashboard() {
             icon={TrendingUp}
             subtitle="Casos processados"
           />
+        </div>
+
+        {/* NE Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard
             title="Notificações Externas"
             value={stats?.total_notif_externas || 0}
             icon={Users}
             color="blue"
             href="/notificacoes-externas"
+          />
+          <StatCard
+            title="NE - Aguarde"
+            value={stats?.ne_aguarde || 0}
+            icon={Clock}
+            color="orange"
+            href="/notificacoes-externas?status=aguarde"
+          />
+          <StatCard
+            title="NE - Concluídas"
+            value={stats?.ne_concluida || 0}
+            icon={CheckCircle}
+            color="green"
+            href="/notificacoes-externas?status=apresentacao_concluida"
           />
         </div>
 

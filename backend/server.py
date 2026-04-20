@@ -148,10 +148,12 @@ class CaseProcess(BaseModel):
     data_fim: Optional[str] = None
     oficial_instrutor: Optional[str] = None
     observacao: Optional[str] = None
+    origem_anexo: Optional[str] = None
 
 class StatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(processado|arquivado|pendente|anulado|em_processo)$")
     despacho_url: Optional[str] = None
+    origem_anexo: Optional[str] = None
 
 class PasswordVerify(BaseModel):
     password: str
@@ -578,6 +580,8 @@ async def update_case_status(case_id: str, status_data: StatusUpdate, request: R
     }
     if status_data.despacho_url:
         update_data["despacho_url"] = status_data.despacho_url
+    if status_data.origem_anexo:
+        update_data["origem_anexo"] = status_data.origem_anexo
     
     await db.cases.update_one({"id": case_id}, {"$set": update_data})
     await log_activity(current_user["id"], current_user["nome"], "UPDATE_STATUS", f"Caso {case['numero']} - status: {status_data.status}")
@@ -607,6 +611,7 @@ async def process_case(case_id: str, process_data: CaseProcess, request: Request
         "data_fim": process_data.data_fim,
         "oficial_instrutor": process_data.oficial_instrutor,
         "observacao": process_data.observacao,
+        "origem_anexo": process_data.origem_anexo,
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -766,6 +771,8 @@ async def get_dashboard_stats(request: Request):
     
     # Total notificações externas
     total_notif_externas = await db.notificacoes_externas.count_documents({})
+    ne_aguarde = await db.notificacoes_externas.count_documents({"status": "aguarde"})
+    ne_concluida = await db.notificacoes_externas.count_documents({"status": "apresentacao_concluida"})
     
     return {
         "total": total,
@@ -777,6 +784,8 @@ async def get_dashboard_stats(request: Request):
         "masculino": masculino,
         "feminino": feminino,
         "total_notif_externas": total_notif_externas,
+        "ne_aguarde": ne_aguarde,
+        "ne_concluida": ne_concluida,
         "monthly": [{"month": m["_id"], "count": m["count"]} for m in monthly_data],
         "by_type": [{"tipo": t["_id"] or "Não especificado", "count": t["count"]} for t in type_data],
         "by_unit": [{"unidade": u["_id"] or "Não especificada", "count": u["count"]} for u in unit_data]
@@ -884,6 +893,40 @@ async def get_expiring_sanctions(request: Request):
     
     return {"notifications": expiring_cases, "count": len(expiring_cases)}
 
+@api_router.get("/notifications/expiring-ne")
+async def get_expiring_ne_presentations(request: Request):
+    """Get NE with presentations coming up in 5 days or less"""
+    current_user = await get_current_user(request)
+    
+    today = datetime.now(timezone.utc).date()
+    
+    nes = await db.notificacoes_externas.find(
+        {"status": "aguarde", "data_apresenta": {"$ne": "", "$exists": True}},
+        {"_id": 0}
+    ).to_list(500)
+    
+    upcoming = []
+    for ne in nes:
+        try:
+            dt = datetime.strptime(ne["data_apresenta"], "%Y-%m-%d").date()
+            days_remaining = (dt - today).days
+            if 0 <= days_remaining <= 5:
+                upcoming.append({
+                    "id": ne["id"],
+                    "numero": ne["numero"],
+                    "nome_completo": ne["nome_completo"],
+                    "posto": ne.get("posto", ""),
+                    "componente_unidade": ne.get("componente_unidade", ""),
+                    "qualidade": ne.get("qualidade", ""),
+                    "data_apresenta": ne["data_apresenta"],
+                    "dias_restantes": days_remaining
+                })
+        except (ValueError, TypeError):
+            continue
+    
+    upcoming.sort(key=lambda x: x["dias_restantes"])
+    return {"notifications": upcoming, "count": len(upcoming)}
+
 @api_router.get("/notifications/admin")
 async def get_admin_notifications(request: Request):
     """Get action notifications for super_admin and admin users"""
@@ -921,15 +964,16 @@ async def list_notificacoes(
     request: Request,
     page: int = 1, limit: int = 20,
     nome: str = None, nim: str = None, posto: str = None,
-    componente: str = None, qualidade: str = None
+    componente: str = None, qualidade: str = None, status: str = None
 ):
     current_user = await get_current_user(request)
     query = {}
-    if nome: query["nome_completo"] = {"$regex": nome, "$options": "i"}
+    if nome: query["$or"] = [{"nome_completo": {"$regex": nome, "$options": "i"}}, {"nim": {"$regex": nome, "$options": "i"}}]
     if nim: query["nim"] = {"$regex": nim, "$options": "i"}
     if posto and posto != "all": query["posto"] = posto
     if componente and componente != "all": query["componente_unidade"] = componente
     if qualidade and qualidade != "all": query["qualidade"] = qualidade
+    if status and status != "all": query["status"] = status
 
     skip = (page - 1) * limit
     notifs = await db.notificacoes_externas.find(query, {"_id": 0}).sort("numero", -1).skip(skip).limit(limit).to_list(limit)
@@ -950,23 +994,38 @@ async def create_notificacao(request: Request):
     body = await request.json()
 
     numero = await get_next_notif_number()
+    
+    # Determine initial status based on data_apresenta
+    status_ne = "aguarde"
+    data_apresenta = body.get("data_apresenta", "")
+    if data_apresenta:
+        try:
+            dt = datetime.strptime(data_apresenta, "%Y-%m-%d").date()
+            if dt < datetime.now(timezone.utc).date():
+                status_ne = "apresentacao_concluida"
+        except ValueError:
+            pass
+    
     notif = {
         "id": str(uuid.uuid4()),
         "numero": numero,
         "data_entrada": body.get("data_entrada", ""),
         "nim": body.get("nim", ""),
         "nome_completo": body.get("nome_completo", ""),
+        "telefone": body.get("telefone", ""),
+        "email": body.get("email", ""),
         "sexo": body.get("sexo", ""),
         "posto": body.get("posto", ""),
         "componente_unidade": body.get("componente_unidade", ""),
         "qualidade": body.get("qualidade", ""),
         "tipo_caso": body.get("tipo_caso", ""),
         "nu_nuc": body.get("nu_nuc", ""),
-        "data_apresenta": body.get("data_apresenta", ""),
+        "data_apresenta": data_apresenta,
         "horas": body.get("horas", ""),
         "despacho_url": None,
         "observacao": body.get("observacao", ""),
         "foto_url": None,
+        "status": status_ne,
         "created_by": current_user["id"],
         "created_by_nome": current_user["nome"],
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -987,7 +1046,7 @@ async def update_notificacao(notif_id: str, request: Request):
     if not notif:
         raise HTTPException(status_code=404, detail="Notificação não encontrada")
 
-    allowed_fields = ["data_entrada", "nim", "nome_completo", "sexo", "posto", "componente_unidade",
+    allowed_fields = ["data_entrada", "nim", "nome_completo", "telefone", "email", "sexo", "posto", "componente_unidade",
                       "qualidade", "tipo_caso", "nu_nuc", "data_apresenta", "horas", "observacao"]
     update_data = {k: v for k, v in body.items() if k in allowed_fields}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -1258,19 +1317,53 @@ async def startup():
     if expired_count > 0:
         logger.info(f"Moved {expired_count} expired sanctions to 'anulado'")
     
-    # Start background task for periodic sanction check
+    # Check NE presentations on startup
+    ne_completed = await check_ne_presentations()
+    if ne_completed > 0:
+        logger.info(f"NE: {ne_completed} apresentações concluídas")
+    
+    # Start background task for periodic checks
     asyncio.create_task(periodic_sanction_check())
     
     logger.info("Sistema de Gestão Disciplinar iniciado")
 
 async def periodic_sanction_check():
-    """Periodically check for expired sanctions (every hour)"""
+    """Periodically check for expired sanctions and NE presentations (every hour)"""
     while True:
-        await asyncio.sleep(3600)  # Check every hour
+        await asyncio.sleep(3600)
         try:
             await check_expired_sanctions()
+            await check_ne_presentations()
         except Exception as e:
-            logger.error(f"Periodic sanction check failed: {e}")
+            logger.error(f"Periodic check failed: {e}")
+
+async def check_ne_presentations():
+    """Check NE presentation dates - auto-complete past presentations, notify upcoming"""
+    today = datetime.now(timezone.utc).date()
+    yesterday = today - timedelta(days=1)
+    
+    # Auto-complete: NEs where data_apresenta is more than 1 day past
+    aguarde_nes = await db.notificacoes_externas.find(
+        {"status": "aguarde", "data_apresenta": {"$ne": "", "$exists": True}}, {"_id": 0}
+    ).to_list(500)
+    
+    completed = 0
+    for ne in aguarde_nes:
+        try:
+            dt = datetime.strptime(ne["data_apresenta"], "%Y-%m-%d").date()
+            if dt < today:
+                await db.notificacoes_externas.update_one(
+                    {"id": ne["id"]},
+                    {"$set": {"status": "apresentacao_concluida", "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                completed += 1
+        except (ValueError, KeyError):
+            pass
+    
+    if completed:
+        logger.info(f"NE: {completed} apresentações concluídas automaticamente")
+    
+    return completed
 
 async def seed_demo_data():
     """Seed demo users and cases"""
