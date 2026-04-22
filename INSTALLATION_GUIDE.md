@@ -118,6 +118,51 @@ mongosh --eval "db.runCommand({ ping: 1 })"
 # Deve mostrar: { ok: 1 }
 ```
 
+**Configurar autenticacao do MongoDB (OBRIGATORIO para seguranca):**
+
+```bash
+# Conectar ao MongoDB para criar o utilizador administrador
+mongosh
+
+# Dentro do shell do MongoDB, executar:
+use admin
+db.createUser({
+  user: "admtl",
+  pwd: "@justica#",
+  roles: [ { role: "root", db: "admin" } ]
+})
+exit
+```
+
+Agora ativar a autenticacao:
+
+```bash
+# Editar a configuracao do MongoDB
+sudo nano /etc/mongod.conf
+```
+
+Procure a linha `#security:` e substitua por:
+```yaml
+security:
+  authorization: enabled
+```
+
+Salve o ficheiro (Ctrl+O, Enter, Ctrl+X) e reinicie o MongoDB:
+
+```bash
+sudo systemctl restart mongod
+```
+
+Verificar que a autenticacao funciona:
+```bash
+# Com credenciais (deve funcionar)
+mongosh -u admtl -p '@justica#' --authenticationDatabase admin --eval "show dbs"
+
+# Sem credenciais (deve dar erro)
+mongosh --eval "show dbs"
+# Deve mostrar: MongoServerError: Command listDatabases requires authentication
+```
+
 ---
 
 ### Passo 5 de 7: Clonar e configurar o projeto
@@ -147,7 +192,7 @@ pip install -r requirements.txt
 
 ```bash
 cat > .env << 'EOF'
-MONGO_URL=mongodb://localhost:27017
+MONGO_URL=mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin
 DB_NAME=disciplina_fdtl
 JWT_SECRET=ALTERAR_PARA_CHAVE_SECRETA_ALEATORIA_DE_64_CARACTERES
 ADMIN_EMAIL=superadmin@falintil.tl
@@ -156,6 +201,9 @@ FRONTEND_URL=http://localhost:3000
 CORS_ORIGINS=http://localhost:3000
 EOF
 ```
+
+> NOTA sobre o MONGO_URL: A senha `@justica#` esta codificada em URL encoding:
+> `@` = `%40` e `#` = `%23`. O formato final e: `admtl:%40justica%23`
 
 Para gerar uma chave secreta aleatoria para JWT_SECRET:
 ```bash
@@ -305,6 +353,48 @@ mongosh --eval "db.runCommand({ ping: 1 })"
 
 Se nao funcionar, verifique nos Servicos do Windows (Win+R, digite `services.msc`) se o servico "MongoDB Server" esta a correr.
 
+**Configurar autenticacao do MongoDB (OBRIGATORIO para seguranca):**
+
+Abra o PowerShell e execute:
+```powershell
+mongosh
+```
+
+Dentro do shell do MongoDB, execute:
+```javascript
+use admin
+db.createUser({
+  user: "admtl",
+  pwd: "@justica#",
+  roles: [ { role: "root", db: "admin" } ]
+})
+exit
+```
+
+Agora ativar a autenticacao. Abra o ficheiro de configuracao do MongoDB:
+- Caminho habitual: `C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg`
+- Abra com o Bloco de Notas **como Administrador**
+
+Procure a seccao `#security:` e substitua por:
+```yaml
+security:
+  authorization: enabled
+```
+
+Salve o ficheiro e reinicie o servico MongoDB:
+```powershell
+Restart-Service MongoDB
+```
+
+Verificar que a autenticacao funciona:
+```powershell
+# Com credenciais (deve funcionar)
+mongosh -u admtl -p '@justica#' --authenticationDatabase admin --eval "show dbs"
+
+# Sem credenciais (deve dar erro de autenticacao)
+mongosh --eval "show dbs"
+```
+
 ---
 
 ### Passo 5 de 8: Instalar o Git
@@ -353,7 +443,7 @@ pip install -r requirements.txt
 Abra o Bloco de Notas (Notepad) e crie um ficheiro com o seguinte conteudo:
 
 ```
-MONGO_URL=mongodb://localhost:27017
+MONGO_URL=mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin
 DB_NAME=disciplina_fdtl
 JWT_SECRET=ALTERAR_PARA_CHAVE_SECRETA_ALEATORIA_DE_64_CARACTERES
 ADMIN_EMAIL=superadmin@falintil.tl
@@ -361,6 +451,9 @@ ADMIN_PASSWORD=Admin@2024
 FRONTEND_URL=http://localhost:3000
 CORS_ORIGINS=http://localhost:3000
 ```
+
+> NOTA sobre o MONGO_URL: A senha `@justica#` esta codificada em URL encoding:
+> `@` = `%40` e `#` = `%23`. O formato final e: `admtl:%40justica%23`
 
 Salve como: `C:\Users\SeuUsuario\Documents\sistema-disciplinar\backend\.env`
 
@@ -787,6 +880,37 @@ nginx -v            # nginx/1.x.x
 pm2 --version       # 5.x.x
 ```
 
+**Configurar autenticacao do MongoDB (OBRIGATORIO em producao):**
+
+```bash
+# Criar utilizador administrador
+mongosh <<'MONGOEOF'
+use admin
+db.createUser({
+  user: "admtl",
+  pwd: "@justica#",
+  roles: [ { role: "root", db: "admin" } ]
+})
+MONGOEOF
+
+# Ativar autenticacao
+sudo nano /etc/mongod.conf
+```
+
+Procure `#security:` e substitua por:
+```yaml
+security:
+  authorization: enabled
+```
+
+```bash
+# Reiniciar MongoDB com autenticacao
+sudo systemctl restart mongod
+
+# Verificar acesso com credenciais
+mongosh -u admtl -p '@justica#' --authenticationDatabase admin --eval "show dbs"
+```
+
 ---
 
 ### Passo 3 de 9: Criar usuario da aplicacao
@@ -830,7 +954,7 @@ echo "Chave gerada: $JWT_KEY"
 
 # Criar ficheiro .env
 cat > .env << EOF
-MONGO_URL=mongodb://localhost:27017
+MONGO_URL=mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin
 DB_NAME=disciplina_fdtl_prod
 JWT_SECRET=$JWT_KEY
 ADMIN_EMAIL=superadmin@falintil.tl
@@ -840,6 +964,8 @@ CORS_ORIGINS=https://seudominio.com
 EOF
 ```
 
+> NOTA sobre o MONGO_URL: A senha `@justica#` esta codificada em URL encoding:
+> `@` = `%40` e `#` = `%23`. O formato final e: `admtl:%40justica%23`
 > IMPORTANTE: Substitua `SuaSenhaForteAqui2024!` por uma senha forte.
 > IMPORTANTE: Substitua `seudominio.com` pelo dominio real do servidor.
 
@@ -1094,6 +1220,35 @@ Se nao reconhecer o comando `mongosh`, adicione ao PATH:
 $env:Path += ";C:\Program Files\MongoDB\Server\6.0\bin"
 ```
 
+**Configurar autenticacao do MongoDB (OBRIGATORIO em producao):**
+
+```powershell
+mongosh
+```
+
+Dentro do shell do MongoDB:
+```javascript
+use admin
+db.createUser({
+  user: "admtl",
+  pwd: "@justica#",
+  roles: [ { role: "root", db: "admin" } ]
+})
+exit
+```
+
+Ativar autenticacao:
+- Abra `C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg` com Bloco de Notas **como Administrador**
+- Procure `#security:` e substitua por:
+```yaml
+security:
+  authorization: enabled
+```
+- Salve e reinicie o servico:
+```powershell
+Restart-Service MongoDB
+```
+
 ---
 
 ### Passo 4 de 9: Instalar o Git
@@ -1147,7 +1302,7 @@ pip install -r requirements.txt
 Abra o Bloco de Notas como Administrador e crie o ficheiro `C:\Apps\Disciplina\backend\.env`:
 
 ```
-MONGO_URL=mongodb://localhost:27017
+MONGO_URL=mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin
 DB_NAME=disciplina_fdtl_prod
 JWT_SECRET=COLE_A_CHAVE_SECRETA_AQUI
 ADMIN_EMAIL=superadmin@falintil.tl
@@ -1155,6 +1310,9 @@ ADMIN_PASSWORD=SuaSenhaForteAqui2024!
 FRONTEND_URL=https://seudominio.com
 CORS_ORIGINS=https://seudominio.com
 ```
+
+> NOTA sobre o MONGO_URL: A senha `@justica#` esta codificada em URL encoding:
+> `@` = `%40` e `#` = `%23`. O formato final e: `admtl:%40justica%23`
 
 Para gerar a chave secreta:
 ```powershell
@@ -1315,6 +1473,16 @@ Apos a instalacao, o sistema cria automaticamente estes utilizadores:
 
 > SEGURANCA: Altere TODAS as senhas padrao apos o primeiro acesso em producao!
 
+**Credenciais da Base de Dados MongoDB:**
+
+| Campo       | Valor         |
+|-------------|---------------|
+| Utilizador  | admtl         |
+| Senha       | @justica#     |
+| Auth Source  | admin         |
+
+> SEGURANCA: Em producao, considere alterar estas credenciais padrao para valores mais fortes.
+
 ---
 
 ## Armazenamento de Ficheiros
@@ -1346,14 +1514,14 @@ backend/uploads/
 ### Linux
 
 ```bash
-# Fazer backup da base de dados
-mongodump --db disciplina_fdtl_prod --out /backup/$(date +%Y%m%d)
+# Fazer backup da base de dados (com autenticacao)
+mongodump --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod --out /backup/$(date +%Y%m%d)
 
 # Fazer backup dos ficheiros anexados
 cp -r /home/disciplina/app/backend/uploads /backup/$(date +%Y%m%d)/uploads
 
 # Restaurar backup da base de dados
-mongorestore --db disciplina_fdtl_prod /backup/20260408/disciplina_fdtl_prod
+mongorestore --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod /backup/20260408/disciplina_fdtl_prod
 
 # Restaurar backup dos ficheiros
 cp -r /backup/20260408/uploads /home/disciplina/app/backend/uploads
@@ -1361,21 +1529,21 @@ cp -r /backup/20260408/uploads /home/disciplina/app/backend/uploads
 # Agendar backup diario (crontab)
 crontab -e
 # Adicione as linhas:
-# 0 2 * * * mongodump --db disciplina_fdtl_prod --out /backup/$(date +\%Y\%m\%d)
+# 0 2 * * * mongodump --uri="mongodb://admtl:\%40justica\%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod --out /backup/$(date +\%Y\%m\%d)
 # 0 2 * * * cp -r /home/disciplina/app/backend/uploads /backup/$(date +\%Y\%m\%d)/uploads
 ```
 
 ### Windows
 
 ```powershell
-# Fazer backup da base de dados
-mongodump --db disciplina_fdtl_prod --out C:\Backup\MongoDB\%date:~0,4%%date:~5,2%%date:~8,2%
+# Fazer backup da base de dados (com autenticacao)
+mongodump --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod --out C:\Backup\MongoDB\%date:~0,4%%date:~5,2%%date:~8,2%
 
 # Fazer backup dos ficheiros anexados
 xcopy /E /I C:\Apps\Disciplina\backend\uploads C:\Backup\Uploads\%date:~0,4%%date:~5,2%%date:~8,2%
 
 # Restaurar backup da base de dados
-mongorestore --db disciplina_fdtl_prod C:\Backup\MongoDB\20260408\disciplina_fdtl_prod
+mongorestore --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod C:\Backup\MongoDB\20260408\disciplina_fdtl_prod
 
 # Restaurar backup dos ficheiros
 xcopy /E /I C:\Backup\Uploads\20260408 C:\Apps\Disciplina\backend\uploads
@@ -1384,7 +1552,7 @@ xcopy /E /I C:\Backup\Uploads\20260408 C:\Apps\Disciplina\backend\uploads
 Para agendar backup automatico no Windows:
 1. Abra o Task Scheduler
 2. Crie uma tarefa diaria
-3. Action: `mongodump --db disciplina_fdtl_prod --out C:\Backup\MongoDB\`
+3. Action: `mongodump --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod --out C:\Backup\MongoDB\`
 
 ---
 
@@ -1423,6 +1591,20 @@ sudo systemctl restart mongod
 ```powershell
 # Windows - Reiniciar servico
 Restart-Service MongoDB
+```
+
+### Erro de autenticacao no MongoDB
+
+Se o backend mostrar erro `Authentication failed`:
+1. Verifique se o MONGO_URL no `.env` tem as credenciais corretas com URL encoding
+2. Verifique se a autenticacao esta ativada no `mongod.conf`
+3. Teste manualmente:
+```bash
+mongosh -u admtl -p '@justica#' --authenticationDatabase admin --eval "show dbs"
+```
+4. Se precisar recriar o utilizador:
+```bash
+# Pare o MongoDB, desative temporariamente a autenticacao, reinicie, crie o utilizador, reative
 ```
 
 ---

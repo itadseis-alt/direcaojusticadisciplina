@@ -7,7 +7,7 @@ Criar um sistema de Gestao Disciplinar completo para a FALINTIL-FDTL. O sistema 
 - **Frontend**: React + Tailwind CSS + Shadcn UI (porta 3000)
 - **Backend**: FastAPI + MongoDB (Motor Async) + PyJWT + bcrypt (porta 8001)
 - **Storage**: Filesystem local (/uploads)
-- **DB**: MongoDB via MONGO_URL
+- **DB**: MongoDB com autenticacao (user: admtl, authSource: admin)
 
 ## Funcionalidades Implementadas
 - Autenticacao JWT com RBAC (4 roles)
@@ -31,7 +31,8 @@ Criar um sistema de Gestao Disciplinar completo para a FALINTIL-FDTL. O sistema 
 - Filtro de status na listagem de NE
 - Correcao de roteamento de notificacoes (NE vs Casos)
 - Protecao por senha na edicao de NE
-- Guia de Instalacao para rede local
+- **MongoDB com autenticacao (user: admtl, senha: @justica#)**
+- Guia de Instalacao completo (Linux/Windows, localhost/servidor/rede local) com instrucoes de seguranca MongoDB
 
 ## Backlog P1
 - Integracao com PMS (Sistema de Gestao de Pessoal)
