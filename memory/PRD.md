@@ -31,8 +31,19 @@ Criar um sistema de Gestao Disciplinar completo para a FALINTIL-FDTL. O sistema 
 - Filtro de status na listagem de NE
 - Correcao de roteamento de notificacoes (NE vs Casos)
 - Protecao por senha na edicao de NE
-- **MongoDB com autenticacao (user: admtl, senha: @justica#)**
-- Guia de Instalacao completo (Linux/Windows, localhost/servidor/rede local) com instrucoes de seguranca MongoDB
+- MongoDB com autenticacao (user: admtl, senha: @justica#)
+- Guia de Instalacao completo com instrucoes MongoDB auth
+
+### Novas funcionalidades (Iteracao 4 - Maio 2026):
+- **Alerta casos Em Processo > 30 dias**: Notificacao automatica para Admin e Pessoal Justica
+- **Despacho PDF obrigatorio**: Processar caso e arquivar exigem anexo PDF
+- **Foto perfil no sidebar**: Exibe foto do utilizador logado no sidebar
+- **Penas somatorias**: Total de anos de pena calculado e exibido no historico do membro
+- **Notificacoes para Pessoal Justica**: Tabs de sancoes, apresentacoes NE e atrasos
+- **Desativar utilizador**: SuperAdmin pode desativar/ativar utilizadores
+- **Campos extras no utilizador**: NIM, Sexo, Posto, Componente/Unidade
+- **Filtro por Componente/Unidade**: Na lista de casos
+- **Posto e Componente na lista de utilizadores**: Colunas adicionadas
 
 ## Backlog P1
 - Integracao com PMS (Sistema de Gestao de Pessoal)
@@ -41,4 +52,4 @@ Criar um sistema de Gestao Disciplinar completo para a FALINTIL-FDTL. O sistema 
 - Integracao real de e-mail (SendGrid/Resend)
 
 ## Backlog P3
-- Refatoracao do server.py (~1450 linhas -> routers modulares)
+- Refatoracao do server.py (~1500 linhas -> routers modulares)
