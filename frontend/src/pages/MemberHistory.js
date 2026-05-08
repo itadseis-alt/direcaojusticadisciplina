@@ -223,6 +223,31 @@ export default function MemberHistory() {
               </div>
             )}
 
+            {/* Cumulative Sanctions */}
+            {memberHistory.summary.total_anos_pena > 0 && (
+              <div className="bg-white border border-red-200 p-6">
+                <h3 className="text-mono-label text-xs text-zinc-500 mb-4">TOTAL DE PENAS (SOMATÓRIO)</h3>
+                <div className="flex items-center gap-6 mb-4">
+                  <div>
+                    <span className="text-4xl font-black text-red-700">{memberHistory.summary.total_anos_pena}</span>
+                    <span className="text-lg text-red-600 ml-2">ano(s)</span>
+                  </div>
+                  <div className="text-sm text-zinc-600">
+                    de {memberHistory.summary.penas_detalhes?.length || 0} caso(s) processado(s)
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {memberHistory.summary.penas_detalhes?.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm border-b border-zinc-100 pb-2">
+                      <span className="font-mono text-zinc-600">{p.caso_numero}</span>
+                      <span className="text-zinc-900">{p.tipo_sancao}</span>
+                      <span className="font-semibold text-red-700">{p.anos} ano(s)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Cases List */}
             {memberHistory.cases.length > 0 ? (
               <div className="bg-white border border-zinc-200">

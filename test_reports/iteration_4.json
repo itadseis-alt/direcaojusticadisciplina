@@ -1,0 +1,46 @@
+{
+  "summary": "Tested 11 new feature enhancements from PDF document on F-FDTL Disciplinary Management System. Backend: 12/12 pytest pass (login regression, overdue-em-processo endpoint, member-history cumulative sanctions, toggle-active flow with login block, user creation with new fields, cases unidade filter, dashboard stats). Frontend: All UI elements verified across Users, Cases, UserForm, NotificationBell, Layout pages.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "P1_overdue_em_processo": "PASS - GET /api/notifications/overdue-em-processo returns {notifications, count} with dias_em_processo>30. Accessible to admin AND pessoal_justica. NotificationBell shows tab-atraso (data-testid='tab-atraso') visible and clickable for both roles.",
+    "P2_3_mandatory_pdf": "VERIFIED via code review - CaseDetail.js submitProcess requires processPdfFile, submitStatusChange requires despachoFile for arquivar. Labels updated to 'Anexar Despacho (PDF) *'. Not exercised live (would require full case workflow).",
+    "P4_user_foto_sidebar": "PASS - Layout.js (lines 104-110) conditionally renders <img src={filesApi.getUrl(user.foto_url)}> when user.foto_url exists, else User icon. /api/auth/me returns foto_url field. Code path correct.",
+    "P5_cumulative_sanctions": "PASS - GET /api/member-history/{nim} returns summary.total_anos_pena (int) and summary.penas_detalhes (array with caso_numero/tipo_sancao/anos). Test asserts sum(penas_detalhes.anos) == total_anos_pena.",
+    "P6_justica_notif_tabs": "PASS - Logged in as justica@falintil.tl: tab-sancoes, tab-apresentacao, tab-atraso ALL visible (was admin-only previously).",
+    "P7_toggle_active": "PASS - PUT /api/users/{id}/toggle-active returns {message, ativo}. After deactivation, login returns 403 'Conta desativada'. After reactivation, login works again. Cannot toggle super_admin (400). UI shows Ativo/Desativado badge + UserX/UserPlus toggle button (data-testid='toggle-user-{id}').",
+    "P8_9_user_form_new_fields": "PASS - UserForm has data-testid='user-nim-input', 'user-sexo-select', 'user-posto-select', 'user-unidade-select'. NIM input filters non-digits ('ABC123XYZ' -> '123'). Backend UserCreate/Update/Response include nim, sexo, posto, componente_unidade, ativo.",
+    "P10_cases_unidade_filter": "PASS - Cases page has data-testid='case-filter-unidade' dropdown. Backend GET /api/cases?unidade={x} filters correctly.",
+    "P11_users_posto_componente_cols": "PASS - Users table headers include Posto, Componente, Status. 3 toggle-user buttons rendered (one per non-super-admin user).",
+    "regression_login_dashboard_cases": "PASS - Login OK; dashboard/stats returns total/pendentes/em_processo/processados/arquivados/anulados; cases list works."
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4_features.py",
+    "/app/test_reports/pytest/pytest_iteration4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py /api/auth/login response is flat (no nested 'user' object). Frontend AuthContext likely treats whole response as user. This is consistent but worth documenting.",
+    "Pre-existing (not from this iteration): /api/cases POST uses count_documents()+1 for numero generation - non-atomic, can cause DuplicateKeyError if cases deleted. Recommend max(numero)+1 aggregation or counters collection.",
+    "UserForm NIM input correctly strips non-digits in onChange - good UX. Sexo accepts only M/F via Select - good.",
+    "Layout.js correctly handles foto_url with fallback to User icon. filesApi.getUrl resolves S3/MinIO presigned URL.",
+    "toggle-active endpoint correctly blocks toggling super_admin (400). Login endpoint correctly checks ativo flag (line 324) and returns 403 with 'Conta desativada'.",
+    "member-history cumulative sanctions logic uses hardcoded sancao_duracao mapping - if new sanction types are added, dictionary must be updated. Consider moving to config or DB-driven mapping."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4_features.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (all 11 points)"},
+  "test_credentials": "Used superadmin@falintil.tl / Admin@2024 and justica@falintil.tl / Demo@2024 from /app/memory/test_credentials.md",
+  "seed_data_creation": "Created and cleaned up 1 temporary user per test_toggle_active_blocks_login (TEST_ prefix). Test toggles preserved super_admin protection.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 11 features from iteration 4 PDF working. Backend pytest at /app/backend/tests/test_iteration4_features.py (12 tests). Login response is flat (no nested user object). Points 2-3 (mandatory PDF on process/archive) verified via code only - to live-test would need to create+process a case with PDF upload. Points 1, 4-11 confirmed live in UI + backend."
+}

@@ -39,15 +39,17 @@ function timeAgo(dateStr) {
 export function NotificationBell() {
   const [sanctionNotifs, setSanctionNotifs] = useState([]);
   const [neNotifs, setNeNotifs] = useState([]);
+  const [overdueNotifs, setOverdueNotifs] = useState([]);
   const [adminNotifs, setAdminNotifs] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState('acoes');
+  const [tab, setTab] = useState('sancoes');
   const { user } = useAuth();
 
   const isAdmin = user?.tipo === 'super_admin' || user?.tipo === 'admin';
   const isJustica = user?.tipo === 'pessoal_justica';
+  const showTabs = isAdmin || isJustica;
 
   useEffect(() => {
     loadNotifications();
@@ -63,10 +65,14 @@ export function NotificationBell() {
       const neData = await notificationsApi.getExpiringNE();
       setNeNotifs(neData.notifications || []);
 
+      const overdueData = await notificationsApi.getOverdueEmProcesso();
+      setOverdueNotifs(overdueData.notifications || []);
+
       if (isAdmin) {
         const adminData = await notificationsApi.getAdminNotifications();
         setAdminNotifs(adminData.notifications || []);
         setUnreadCount(adminData.unread_count || 0);
+        if (tab === 'sancoes') setTab('acoes');
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
@@ -85,7 +91,7 @@ export function NotificationBell() {
     }
   };
 
-  const totalCount = (isAdmin ? unreadCount : 0) + sanctionNotifs.length + neNotifs.length;
+  const totalCount = (isAdmin ? unreadCount : 0) + sanctionNotifs.length + neNotifs.length + overdueNotifs.length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -110,17 +116,19 @@ export function NotificationBell() {
         </div>
 
         {/* Tabs */}
-        {isAdmin && (
+        {showTabs && (
           <div className="flex border-b border-zinc-200" data-testid="notification-tabs">
-            <button
-              onClick={() => setTab('acoes')}
-              className={`flex-1 text-xs font-medium py-2.5 border-b-2 transition-colors ${
-                tab === 'acoes' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'
-              }`}
-              data-testid="tab-acoes"
-            >
-              Ações {unreadCount > 0 && <span className="ml-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{unreadCount}</span>}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setTab('acoes')}
+                className={`flex-1 text-xs font-medium py-2.5 border-b-2 transition-colors ${
+                  tab === 'acoes' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                }`}
+                data-testid="tab-acoes"
+              >
+                Ações {unreadCount > 0 && <span className="ml-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{unreadCount}</span>}
+              </button>
+            )}
             <button
               onClick={() => setTab('sancoes')}
               className={`flex-1 text-xs font-medium py-2.5 border-b-2 transition-colors ${
@@ -138,6 +146,15 @@ export function NotificationBell() {
               data-testid="tab-apresentacao"
             >
               Apresent. {neNotifs.length > 0 && <span className="ml-1 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{neNotifs.length}</span>}
+            </button>
+            <button
+              onClick={() => setTab('atraso')}
+              className={`flex-1 text-xs font-medium py-2.5 border-b-2 transition-colors ${
+                tab === 'atraso' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'
+              }`}
+              data-testid="tab-atraso"
+            >
+              +30 dias {overdueNotifs.length > 0 && <span className="ml-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{overdueNotifs.length}</span>}
             </button>
           </div>
         )}
@@ -205,8 +222,8 @@ export function NotificationBell() {
                 </>
               )}
 
-              {/* Sanctions Tab (or only tab for non-admin) */}
-              {(tab === 'sancoes' || !isAdmin) && (
+              {/* Sanctions Tab (or only tab for non-admin/non-justica) */}
+              {(tab === 'sancoes' || !showTabs) && (
                 <>
                   {sanctionNotifs.length === 0 ? (
                     <div className="p-8 text-center">
@@ -297,6 +314,42 @@ export function NotificationBell() {
                                 ne.dias_restantes === 0 ? 'text-red-600' : ne.dias_restantes <= 2 ? 'text-orange-600' : 'text-indigo-600'
                               }`}>
                                 {ne.dias_restantes === 0 ? 'Apresentação HOJE!' : ne.dias_restantes === 1 ? 'Apresentação AMANHÃ' : `Apresentação em ${ne.dias_restantes} dias (${ne.data_apresenta})`}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Overdue Em Processo Tab */}
+              {tab === 'atraso' && (
+                <>
+                  {overdueNotifs.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Bell className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                      <p className="text-sm text-zinc-500">Nenhum caso em processo com mais de 30 dias</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-zinc-100">
+                      {overdueNotifs.map((c) => (
+                        <Link
+                          key={c.id}
+                          to={`/casos/${c.id}`}
+                          onClick={() => setOpen(false)}
+                          className="block p-3 hover:bg-zinc-50 transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="p-1.5 bg-red-100">
+                              <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-zinc-900 truncate">{c.refere_ao}</p>
+                              <p className="text-xs text-zinc-500 mt-0.5">{c.numero} - {c.posto}</p>
+                              <p className="text-xs font-semibold mt-0.5 text-red-600">
+                                Em Processo há {c.dias_em_processo} dias
                               </p>
                             </div>
                           </div>

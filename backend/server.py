@@ -106,13 +106,21 @@ logger = logging.getLogger(__name__)
 
 # Models
 class UserCreate(BaseModel):
+    nim: Optional[str] = None
     nome: str
+    sexo: Optional[str] = None
+    posto: Optional[str] = None
+    componente_unidade: Optional[str] = None
     email: EmailStr
     senha: str
     tipo: str = Field(..., pattern="^(super_admin|admin|pessoal_justica|pessoal_superior)$")
 
 class UserUpdate(BaseModel):
+    nim: Optional[str] = None
     nome: Optional[str] = None
+    sexo: Optional[str] = None
+    posto: Optional[str] = None
+    componente_unidade: Optional[str] = None
     email: Optional[EmailStr] = None
     tipo: Optional[str] = None
 
@@ -121,7 +129,12 @@ class UserResponse(BaseModel):
     nome: str
     email: str
     tipo: str
+    nim: Optional[str] = None
+    sexo: Optional[str] = None
+    posto: Optional[str] = None
+    componente_unidade: Optional[str] = None
     foto_url: Optional[str] = None
+    ativo: Optional[bool] = True
     created_at: str
 
 class LoginRequest(BaseModel):
@@ -308,6 +321,8 @@ async def login(request: LoginRequest, response: Response):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
     if not verify_password(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+    if not user.get("ativo", True):
+        raise HTTPException(status_code=403, detail="Conta desativada. Contacte o Super Admin.")
     
     access_token = create_access_token(user["id"], user["email"], user["tipo"])
     refresh_token = create_refresh_token(user["id"])
@@ -366,11 +381,16 @@ async def create_user(user_data: UserCreate, request: Request):
     user_id = str(uuid.uuid4())
     user = {
         "id": user_id,
+        "nim": user_data.nim,
         "nome": user_data.nome,
+        "sexo": user_data.sexo,
+        "posto": user_data.posto,
+        "componente_unidade": user_data.componente_unidade,
         "email": user_data.email.lower(),
         "password_hash": hash_password(user_data.senha),
         "tipo": user_data.tipo,
         "foto_url": None,
+        "ativo": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
@@ -381,7 +401,12 @@ async def create_user(user_data: UserCreate, request: Request):
         nome=user["nome"],
         email=user["email"],
         tipo=user["tipo"],
+        nim=user["nim"],
+        sexo=user["sexo"],
+        posto=user["posto"],
+        componente_unidade=user["componente_unidade"],
         foto_url=user["foto_url"],
+        ativo=user["ativo"],
         created_at=user["created_at"]
     )
 
@@ -433,6 +458,25 @@ async def delete_user(user_id: str, request: Request):
     await log_activity(current_user["id"], current_user["nome"], "DELETE_USER", f"Usuário {target_user['nome']} deletado")
     
     return {"message": "Usuário deletado"}
+
+@api_router.put("/users/{user_id}/toggle-active")
+async def toggle_user_active(user_id: str, request: Request):
+    current_user = await require_roles("super_admin")(request)
+    
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    if target_user["tipo"] == "super_admin":
+        raise HTTPException(status_code=400, detail="Não pode desativar Super Admin")
+    
+    new_status = not target_user.get("ativo", True)
+    await db.users.update_one({"id": user_id}, {"$set": {"ativo": new_status}})
+    action = "ACTIVATE_USER" if new_status else "DEACTIVATE_USER"
+    label = "ativado" if new_status else "desativado"
+    await log_activity(current_user["id"], current_user["nome"], action, f"Usuário {target_user['nome']} {label}")
+    
+    return {"message": f"Usuário {label}", "ativo": new_status}
 
 @api_router.put("/users/{user_id}/password")
 async def update_password(user_id: str, request: Request):
@@ -895,6 +939,39 @@ async def get_expiring_sanctions(request: Request):
     
     return {"notifications": expiring_cases, "count": len(expiring_cases)}
 
+@api_router.get("/notifications/overdue-em-processo")
+async def get_overdue_em_processo(request: Request):
+    """Get cases in 'em_processo' for more than 30 days"""
+    await get_current_user(request)
+    
+    today = datetime.now(timezone.utc).date()
+    
+    cases = await db.cases.find(
+        {"status": "em_processo"},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    overdue = []
+    for case in cases:
+        try:
+            reg_date = datetime.strptime(case.get("data_registo", ""), "%Y-%m-%d").date()
+            days_elapsed = (today - reg_date).days
+            if days_elapsed > 30:
+                overdue.append({
+                    "id": case["id"],
+                    "numero": case["numero"],
+                    "refere_ao": case["refere_ao"],
+                    "posto": case.get("posto", ""),
+                    "componente_unidade": case.get("componente_unidade", ""),
+                    "data_registo": case["data_registo"],
+                    "dias_em_processo": days_elapsed
+                })
+        except (ValueError, TypeError):
+            continue
+    
+    overdue.sort(key=lambda x: x["dias_em_processo"], reverse=True)
+    return {"notifications": overdue, "count": len(overdue)}
+
 @api_router.get("/notifications/expiring-ne")
 async def get_expiring_ne_presentations(request: Request):
     """Get NE with presentations coming up in 5 days or less"""
@@ -1115,6 +1192,26 @@ async def get_member_history(nim: str, request: Request):
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
+    # Calculate cumulative sanction duration for processed cases
+    sancao_duracao = {
+        'Repreensão (1 ano)': 1,
+        'Repreensão Agravada (1 ano)': 1,
+        'Detenção (5 anos)': 5,
+        'Prisão Disciplinar (10 anos)': 10,
+        'Prisão Disciplinar Agravada (10 anos)': 10,
+    }
+    total_anos_pena = 0
+    penas_detalhes = []
+    for c in cases:
+        if c.get("status") == "processado" and c.get("tipo_sancao"):
+            anos = sancao_duracao.get(c["tipo_sancao"], 0)
+            total_anos_pena += anos
+            penas_detalhes.append({
+                "caso_numero": c["numero"],
+                "tipo_sancao": c["tipo_sancao"],
+                "anos": anos
+            })
+    
     # Calculate summary
     summary = {
         "total_casos": len(cases),
@@ -1123,7 +1220,9 @@ async def get_member_history(nim: str, request: Request):
         "pendentes": len([c for c in cases if c["status"] == "pendente"]),
         "anulados": len([c for c in cases if c["status"] == "anulado"]),
         "em_processo": len([c for c in cases if c["status"] == "em_processo"]),
-        "total_notif_externas": len(ne_list)
+        "total_notif_externas": len(ne_list),
+        "total_anos_pena": total_anos_pena,
+        "penas_detalhes": penas_detalhes
     }
     
     return {

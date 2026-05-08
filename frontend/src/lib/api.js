@@ -49,6 +49,10 @@ export const usersApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return data;
+  },
+  toggleActive: async (id) => {
+    const { data } = await axios.put(`${API}/users/${id}/toggle-active`);
+    return data;
   }
 };
 
@@ -137,6 +141,10 @@ export const notificationsApi = {
   },
   getExpiringNE: async () => {
     const { data } = await axios.get(`${API}/notifications/expiring-ne`);
+    return data;
+  },
+  getOverdueEmProcesso: async () => {
+    const { data } = await axios.get(`${API}/notifications/overdue-em-processo`);
     return data;
   },
   markAllRead: async () => {

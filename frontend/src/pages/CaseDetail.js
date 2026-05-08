@@ -159,12 +159,13 @@ export default function CaseDetail() {
       toast.error('Selecione o tipo de sanção');
       return;
     }
+    if (!processPdfFile) {
+      toast.error('Anexar Despacho (PDF) é obrigatório');
+      return;
+    }
     setSubmitting(true);
     try {
-      // Upload PDF if provided
-      if (processPdfFile) {
-        await casesApi.uploadDespacho(id, processPdfFile);
-      }
+      await casesApi.uploadDespacho(id, processPdfFile);
       await casesApi.process(id, processData);
       toast.success('Caso processado com sucesso');
       setProcessDialogOpen(false);
@@ -179,6 +180,10 @@ export default function CaseDetail() {
   };
 
   const submitStatusChange = async () => {
+    if (selectedStatus === 'arquivado' && !despachoFile) {
+      toast.error('Anexar Despacho (PDF) é obrigatório para arquivar');
+      return;
+    }
     setSubmitting(true);
     try {
       let despachoUrl = null;
@@ -654,14 +659,13 @@ export default function CaseDetail() {
             </div>
 
             <div className="space-y-2">
-              <Label>Anexar Documento (PDF)</Label>
+              <Label>Anexar Despacho (PDF) *</Label>
               <Input
                 type="file"
                 accept=".pdf"
                 onChange={(e) => setProcessPdfFile(e.target.files[0])}
                 className="rounded-none"
               />
-              <p className="text-xs text-zinc-500">Anexe o despacho ou documento relacionado (opcional)</p>
             </div>
           </div>
           
@@ -709,14 +713,13 @@ export default function CaseDetail() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Despacho (PDF)</Label>
+                  <Label>Anexar Despacho (PDF) {selectedStatus === 'arquivado' ? '*' : ''}</Label>
                   <Input
                     type="file"
                     accept=".pdf"
                     onChange={(e) => setDespachoFile(e.target.files[0])}
                     className="rounded-none"
                   />
-                  <p className="text-xs text-zinc-500">Anexe o despacho relacionado (opcional)</p>
                 </div>
               </>
             )}

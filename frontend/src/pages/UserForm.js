@@ -10,11 +10,30 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from 'sonner';
+
+const postosGroups = {
+  'Oficiais Generais': ['General', 'Almirante', 'Tenente General', 'Vice Almirante', 'Major General', 'Contra Almirante', 'Brigadeiro General', 'Comodoro'],
+  'Oficiais Superiores': ['Coronel', 'Capitão-de-mar-e-guerra', 'Tenente-Coronel', 'Capitão de Fragata', 'Major', 'Capitão Tenente'],
+  'Oficiais Capitães e Subalternos': ['Capitão', 'Primeiro Tenente', 'Tenente', 'Segundo Tenente', 'Alferes', 'Subtenente'],
+  'Sargentos': ['Sargento Mor', 'Sargento Chefe', 'Sargento Ajudante', 'Primeiro Sargento', 'Segundo Sargento'],
+  'Praças': ['Cabo Secção', 'Cabo', 'Cabo Adjunto', 'Primeiro Marinheiro', 'Segundo Cabo', 'Primeiro Grumete', 'Soldado']
+};
+
+const unidades = [
+  'Unidade Apoio Quartel General', 'Quartel General', 'Componente Força Terrestre (CFT)',
+  'Componente Força Naval (CFN)', 'Componente Aérea Ligeira (CAL)', 'Força Apoio Geral (FAG)',
+  'Unidade Apoio Serviço (UAS)', 'Centro de Instrução do Comandante Nicolau Lobato (CICNL)',
+  'Unidade de Policia Militar (PM)', 'Unidade FALINTIL (UF)',
+  '1º Batalhão da CFT', '2º Batalhão da CFT',
+  'Companhia de Engenharia', 'Companhia de Transmissões', 'Corpo Fuzileiros'
+];
 
 export default function UserForm() {
   const { id } = useParams();
@@ -27,13 +46,16 @@ export default function UserForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
+    nim: '',
     nome: '',
+    sexo: '',
+    posto: '',
+    componente_unidade: '',
     email: '',
     senha: '',
     tipo: ''
   });
 
-  // Determine available roles based on current user
   const availableRoles = currentUser?.tipo === 'super_admin' 
     ? [
         { value: 'admin', label: 'Admin' },
@@ -55,7 +77,11 @@ export default function UserForm() {
     try {
       const data = await usersApi.get(id);
       setFormData({
+        nim: data.nim || '',
         nome: data.nome,
+        sexo: data.sexo || '',
+        posto: data.posto || '',
+        componente_unidade: data.componente_unidade || '',
         email: data.email,
         senha: '',
         tipo: data.tipo
@@ -76,7 +102,6 @@ export default function UserForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!formData.nome || !formData.email || !formData.tipo) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
@@ -96,12 +121,15 @@ export default function UserForm() {
     try {
       if (isEditing) {
         await usersApi.update(id, {
+          nim: formData.nim || null,
           nome: formData.nome,
+          sexo: formData.sexo || null,
+          posto: formData.posto || null,
+          componente_unidade: formData.componente_unidade || null,
           email: formData.email,
           tipo: formData.tipo
         });
         
-        // Update password separately if provided
         if (formData.senha) {
           await usersApi.updatePassword(id, formData.senha);
         }
@@ -133,8 +161,7 @@ export default function UserForm() {
 
   return (
     <Layout title={isEditing ? 'Editar Usuário' : 'Novo Usuário'}>
-      <div className="max-w-xl" data-testid="user-form">
-        {/* Back link */}
+      <div className="max-w-2xl" data-testid="user-form">
         <Link 
           to="/usuarios"
           className="inline-flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 mb-6"
@@ -149,6 +176,19 @@ export default function UserForm() {
               <h3 className="text-mono-label text-xs text-zinc-500">Dados do Usuário</h3>
             </div>
             <div className="p-6 space-y-6">
+              {/* NIM */}
+              <div className="space-y-2">
+                <Label>NIM</Label>
+                <Input
+                  value={formData.nim}
+                  onChange={(e) => handleChange('nim', e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="Apenas números inteiros"
+                  className="rounded-none font-mono"
+                  data-testid="user-nim-input"
+                />
+              </div>
+
+              {/* Nome */}
               <div className="space-y-2">
                 <Label>Nome Completo *</Label>
                 <Input
@@ -161,6 +201,58 @@ export default function UserForm() {
                 />
               </div>
 
+              {/* Sexo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Sexo</Label>
+                  <Select value={formData.sexo} onValueChange={(v) => handleChange('sexo', v)}>
+                    <SelectTrigger className="rounded-none" data-testid="user-sexo-select">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Masculino</SelectItem>
+                      <SelectItem value="F">Feminino</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Posto */}
+                <div className="space-y-2">
+                  <Label>Posto</Label>
+                  <Select value={formData.posto} onValueChange={(v) => handleChange('posto', v)}>
+                    <SelectTrigger className="rounded-none" data-testid="user-posto-select">
+                      <SelectValue placeholder="Selecione o posto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(postosGroups).map(([group, postos]) => (
+                        <SelectGroup key={group}>
+                          <SelectLabel className="text-xs font-semibold text-zinc-500">{group}</SelectLabel>
+                          {postos.map(p => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Componente/Unidade */}
+              <div className="space-y-2">
+                <Label>Componente/Unidade</Label>
+                <Select value={formData.componente_unidade} onValueChange={(v) => handleChange('componente_unidade', v)}>
+                  <SelectTrigger className="rounded-none" data-testid="user-unidade-select">
+                    <SelectValue placeholder="Selecione a unidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unidades.map(u => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Email */}
               <div className="space-y-2">
                 <Label>Email *</Label>
                 <Input
@@ -174,6 +266,7 @@ export default function UserForm() {
                 />
               </div>
 
+              {/* Senha */}
               <div className="space-y-2">
                 <Label>{isEditing ? 'Nova Senha (deixe em branco para manter)' : 'Senha *'}</Label>
                 <div className="relative">
@@ -195,6 +288,7 @@ export default function UserForm() {
                 </div>
               </div>
 
+              {/* Tipo */}
               <div className="space-y-2">
                 <Label>Tipo de Usuário *</Label>
                 <Select value={formData.tipo} onValueChange={(v) => handleChange('tipo', v)}>
@@ -207,16 +301,10 @@ export default function UserForm() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-zinc-500">
-                  {currentUser?.tipo === 'super_admin' 
-                    ? 'Super Admin pode criar Admin, Pessoal Justiça e Pessoal Superior'
-                    : 'Admin pode criar Pessoal Justiça e Pessoal Superior'}
-                </p>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-4">
             <Link to="/usuarios">
               <Button type="button" variant="outline" className="rounded-none">

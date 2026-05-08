@@ -1,28 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
-import { usersApi } from '@/lib/api';
+import { usersApi, filesApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Loader,
-  User,
-  Shield,
-  UserCheck,
-  Eye
+  Plus, Edit, Trash2, Loader, User, Shield, UserCheck, Eye, UserX, UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 
@@ -39,6 +26,8 @@ export default function Users() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const { user: currentUser, canDelete } = useAuth();
+
+  const isSuperAdmin = currentUser?.tipo === 'super_admin';
 
   useEffect(() => {
     loadUsers();
@@ -63,7 +52,6 @@ export default function Users() {
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
-    
     try {
       await usersApi.delete(userToDelete.id);
       toast.success('Usuário deletado com sucesso');
@@ -74,6 +62,16 @@ export default function Users() {
     }
     setDeleteDialogOpen(false);
     setUserToDelete(null);
+  };
+
+  const handleToggleActive = async (userId, currentStatus) => {
+    try {
+      const result = await usersApi.toggleActive(userId);
+      toast.success(result.message);
+      loadUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao alterar status');
+    }
   };
 
   return (
@@ -89,15 +87,13 @@ export default function Users() {
       }
     >
       <div className="space-y-6" data-testid="users-list-view">
-        {/* Info */}
         <div className="bg-blue-50 border border-blue-200 p-4">
           <p className="text-sm text-blue-800">
-            <strong>Permissões:</strong> Super Admin pode criar/editar/deletar todos os usuários. 
+            <strong>Permissões:</strong> Super Admin pode criar/editar/deletar/desativar todos os usuários. 
             Admin pode criar/editar Pessoal Justiça e Pessoal Superior.
           </p>
         </div>
 
-        {/* Table */}
         <div className="bg-white border border-zinc-200 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -110,7 +106,10 @@ export default function Users() {
                   <tr>
                     <th>Nome</th>
                     <th>Email</th>
+                    <th>Posto</th>
+                    <th>Componente</th>
                     <th>Tipo</th>
+                    <th>Status</th>
                     <th>Criado em</th>
                     <th className="text-right">Ações</th>
                   </tr>
@@ -123,52 +122,70 @@ export default function Users() {
                     const canEditUser = currentUser?.tipo === 'super_admin' || 
                       (currentUser?.tipo === 'admin' && !['super_admin', 'admin'].includes(user.tipo));
                     const canDeleteUser = canDelete() && !isCurrentUser;
+                    const isActive = user.ativo !== false;
 
                     return (
-                      <tr key={user.id}>
+                      <tr key={user.id} className={!isActive ? 'opacity-50' : ''}>
                         <td>
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center">
-                              <User className="w-5 h-5 text-zinc-400" />
-                            </div>
+                            {user.foto_url ? (
+                              <img src={filesApi.getUrl(user.foto_url)} alt="" className="w-10 h-10 object-cover bg-zinc-100" />
+                            ) : (
+                              <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center">
+                                <User className="w-5 h-5 text-zinc-400" />
+                              </div>
+                            )}
                             <div>
                               <p className="font-medium text-zinc-900">
                                 {user.nome}
-                                {isCurrentUser && (
-                                  <span className="ml-2 text-xs text-zinc-500">(você)</span>
-                                )}
+                                {isCurrentUser && <span className="ml-2 text-xs text-zinc-500">(você)</span>}
                               </p>
+                              {user.nim && <p className="text-xs text-zinc-400 font-mono">{user.nim}</p>}
                             </div>
                           </div>
                         </td>
-                        <td className="text-zinc-600">{user.email}</td>
+                        <td className="text-zinc-600 text-sm">{user.email}</td>
+                        <td className="text-zinc-600 text-sm">{user.posto || '-'}</td>
+                        <td className="text-zinc-600 text-sm max-w-[150px] truncate">{user.componente_unidade || '-'}</td>
                         <td>
                           <div className="flex items-center gap-2">
                             <Icon className={`w-4 h-4 ${role.color}`} />
                             <span className="text-sm">{role.label}</span>
                           </div>
                         </td>
+                        <td>
+                          {isActive ? (
+                            <span className="text-xs font-semibold px-2 py-1 bg-green-50 text-green-700 border border-green-200">Ativo</span>
+                          ) : (
+                            <span className="text-xs font-semibold px-2 py-1 bg-red-50 text-red-700 border border-red-200">Desativado</span>
+                          )}
+                        </td>
                         <td className="font-mono text-sm text-zinc-500">
                           {new Date(user.created_at).toLocaleDateString('pt-BR')}
                         </td>
                         <td>
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
                             {canEditUser && (
                               <Link to={`/usuarios/${user.id}/editar`}>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="rounded-none"
-                                  data-testid={`edit-user-${user.id}`}
-                                >
+                                <Button variant="ghost" size="sm" className="rounded-none" data-testid={`edit-user-${user.id}`}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
                               </Link>
                             )}
+                            {isSuperAdmin && user.tipo !== 'super_admin' && !isCurrentUser && (
+                              <Button 
+                                variant="ghost" size="sm"
+                                onClick={() => handleToggleActive(user.id, isActive)}
+                                className={`rounded-none ${isActive ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}`}
+                                data-testid={`toggle-user-${user.id}`}
+                                title={isActive ? 'Desativar' : 'Ativar'}
+                              >
+                                {isActive ? <UserX className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                              </Button>
+                            )}
                             {canDeleteUser && (
                               <Button 
-                                variant="ghost" 
-                                size="sm"
+                                variant="ghost" size="sm"
                                 onClick={() => handleDelete(user)}
                                 className="rounded-none text-red-600 hover:text-red-700 hover:bg-red-50"
                                 data-testid={`delete-user-${user.id}`}
@@ -183,7 +200,7 @@ export default function Users() {
                   })}
                   {users.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center text-zinc-500 py-16">
+                      <td colSpan={8} className="text-center text-zinc-500 py-16">
                         Nenhum usuário encontrado
                       </td>
                     </tr>
@@ -195,7 +212,6 @@ export default function Users() {
         </div>
       </div>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="rounded-none">
           <AlertDialogHeader>

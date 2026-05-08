@@ -35,19 +35,23 @@ const statusOptions = [
 ];
 
 const postos = [
-  // Oficiais Generais
   'General', 'Almirante', 'Tenente General', 'Vice Almirante', 
   'Major General', 'Contra Almirante', 'Brigadeiro General', 'Comodoro',
-  // Oficiais Superiores
   'Coronel', 'Capitão-de-mar-e-guerra', 'Tenente-Coronel', 
   'Capitão de Fragata', 'Major', 'Capitão Tenente',
-  // Oficiais Capitães e Subalternos
   'Capitão', 'Primeiro Tenente', 'Tenente', 'Segundo Tenente', 'Alferes', 'Subtenente',
-  // Sargentos
   'Sargento Mor', 'Sargento Chefe', 'Sargento Ajudante', 'Primeiro Sargento', 'Segundo Sargento',
-  // Praças
   'Cabo Secção', 'Cabo', 'Cabo Adjunto', 'Primeiro Marinheiro', 
   'Segundo Cabo', 'Primeiro Grumete', 'Soldado'
+];
+
+const unidades = [
+  'Unidade Apoio Quartel General', 'Quartel General', 'Componente Força Terrestre (CFT)',
+  'Componente Força Naval (CFN)', 'Componente Aérea Ligeira (CAL)', 'Força Apoio Geral (FAG)',
+  'Unidade Apoio Serviço (UAS)', 'Centro de Instrução do Comandante Nicolau Lobato (CICNL)',
+  'Unidade de Policia Militar (PM)', 'Unidade FALINTIL (UF)',
+  '1º Batalhão da CFT', '2º Batalhão da CFT',
+  'Companhia de Engenharia', 'Companhia de Transmissões', 'Corpo Fuzileiros'
 ];
 
 export default function Cases() {
@@ -62,12 +66,13 @@ export default function Cases() {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [status, setStatus] = useState(searchParams.get('status') || 'all');
   const [posto, setPosto] = useState(searchParams.get('posto') || 'all');
+  const [unidade, setUnidade] = useState(searchParams.get('unidade') || 'all');
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [limit, setLimit] = useState(parseInt(searchParams.get('limit')) || 10);
 
   useEffect(() => {
     loadCases();
-  }, [status, posto, page, limit]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [status, posto, unidade, page, limit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCases = async () => {
     setLoading(true);
@@ -75,6 +80,7 @@ export default function Cases() {
       const params = { page, limit };
       if (status && status !== 'all') params.status = status;
       if (posto && posto !== 'all') params.posto = posto;
+      if (unidade && unidade !== 'all') params.unidade = unidade;
       if (search) params.search = search;
 
       const data = await casesApi.list(params);
@@ -86,6 +92,7 @@ export default function Cases() {
       if (search) newParams.set('search', search);
       if (status && status !== 'all') newParams.set('status', status);
       if (posto && posto !== 'all') newParams.set('posto', posto);
+      if (unidade && unidade !== 'all') newParams.set('unidade', unidade);
       if (page > 1) newParams.set('page', page.toString());
       if (limit !== 10) newParams.set('limit', limit.toString());
       setSearchParams(newParams);
@@ -128,10 +135,11 @@ export default function Cases() {
     setSearch('');
     setStatus('all');
     setPosto('all');
+    setUnidade('all');
     setPage(1);
   };
 
-  const hasFilters = search || status !== 'all' || posto !== 'all';
+  const hasFilters = search || status !== 'all' || posto !== 'all' || unidade !== 'all';
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -208,6 +216,18 @@ export default function Cases() {
                 <SelectItem value="all">Todos os Postos</SelectItem>
                 {postos.map(p => (
                   <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={unidade} onValueChange={(v) => { setUnidade(v); setPage(1); }}>
+              <SelectTrigger className="w-[220px] rounded-none" data-testid="case-filter-unidade">
+                <SelectValue placeholder="Componente/Unidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Unidades</SelectItem>
+                {unidades.map(u => (
+                  <SelectItem key={u} value={u}>{u}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
