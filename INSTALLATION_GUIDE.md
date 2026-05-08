@@ -1663,40 +1663,266 @@ uvicorn server:app --host 127.0.0.1 --port 8001
 
 ### Atualizar o sistema (nova versao)
 
+> Este guia assume que o repositorio ja foi clonado com `git clone` anteriormente.
+> Todos os comandos devem ser executados no servidor onde o sistema esta instalado.
+
+---
+
+#### LINUX (PM2 + Nginx)
+
+**Passo 1 de 6: Fazer backup ANTES de atualizar**
+
 ```bash
-# Linux
-cd /home/disciplina/app
-git pull
+# Backup da base de dados
+mongodump --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" \
+  --db disciplina_fdtl_prod --out /backup/$(date +%Y%m%d)_pre_update
 
-# Backend
-cd backend
-source venv/bin/activate
-pip install -r requirements.txt
-pm2 restart disciplina-backend
+# Backup dos ficheiros anexados
+cp -r /home/disciplina/app/backend/uploads /backup/$(date +%Y%m%d)_pre_update/uploads
 
-# Frontend
-cd ../frontend
-yarn install
-yarn build
-sudo systemctl reload nginx
+echo "Backup concluido em /backup/$(date +%Y%m%d)_pre_update"
 ```
 
-```powershell
-# Windows
-cd C:\Apps\Disciplina
-git pull
+> IMPORTANTE: Nunca atualize sem backup. Se algo correr mal, pode restaurar.
 
-# Backend
-cd backend
+---
+
+**Passo 2 de 6: Buscar as alteracoes do GitHub**
+
+```bash
+# Navegar para a pasta do projeto
+cd /home/disciplina/app
+
+# Verificar em que branch esta
+git branch
+# Deve mostrar: * main  (ou master)
+
+# Buscar e aplicar as alteracoes
+git pull origin main
+```
+
+Se aparecer erro de conflitos:
+```bash
+# Opcao A: Descartar alteracoes locais e usar a versao do GitHub
+git stash
+git pull origin main
+
+# Opcao B: Se fez alteracoes locais que quer manter
+git stash
+git pull origin main
+git stash pop
+# Resolver conflitos manualmente se aparecerem
+```
+
+**Verificar que o git pull funcionou:**
+```bash
+git log --oneline -5
+# Deve mostrar os ultimos 5 commits incluindo os novos
+```
+
+---
+
+**Passo 3 de 6: Atualizar o Backend**
+
+```bash
+cd /home/disciplina/app/backend
+
+# Ativar o ambiente virtual Python
+source venv/bin/activate
+
+# Instalar/atualizar dependencias (se houver novas)
+pip install -r requirements.txt
+```
+
+---
+
+**Passo 4 de 6: Atualizar o ficheiro .env do Backend (se necessario)**
+
+Nesta atualizacao, o MONGO_URL deve incluir as credenciais de autenticacao.
+
+```bash
+# Verificar o conteudo atual do .env
+cat .env
+```
+
+Se o MONGO_URL ainda NAO tiver credenciais (formato antigo `mongodb://localhost:27017`), atualize:
+
+```bash
+# Editar o ficheiro .env
+nano .env
+```
+
+Altere a linha MONGO_URL de:
+```
+MONGO_URL=mongodb://localhost:27017
+```
+
+Para:
+```
+MONGO_URL=mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin
+```
+
+> NOTA: `%40` = `@` e `%23` = `#` (URL encoding da senha `@justica#`)
+
+Salve (Ctrl+O, Enter, Ctrl+X).
+
+Se o MONGO_URL ja tem as credenciais, nao precisa alterar.
+
+---
+
+**Passo 5 de 6: Atualizar o Frontend**
+
+```bash
+cd /home/disciplina/app/frontend
+
+# Instalar/atualizar dependencias
+yarn install
+
+# Recompilar para producao
+yarn build
+# Aguarde... Deve mostrar "Compiled successfully" ao final
+```
+
+---
+
+**Passo 6 de 6: Reiniciar os servicos e verificar**
+
+```bash
+# Reiniciar o backend
+sudo -u disciplina pm2 restart disciplina-backend
+
+# Recarregar o Nginx (serve os novos ficheiros do frontend)
+sudo systemctl reload nginx
+
+# Verificar se o backend esta a correr
+sudo -u disciplina pm2 status
+# Deve mostrar: disciplina-backend | online
+
+# Ver logs do backend (verificar se nao ha erros)
+sudo -u disciplina pm2 logs disciplina-backend --lines 20
+```
+
+**Testar no navegador:**
+1. Abra o navegador e acesse o sistema
+2. Faca login com Super Admin
+3. Verifique as novas funcionalidades:
+   - Pagina de Usuarios mostra colunas Posto, Componente, Status
+   - Botao de desativar utilizador (icone de pessoa com X)
+   - Formulario de novo utilizador tem campos NIM, Sexo, Posto, Componente/Unidade
+   - Lista de casos tem filtro por Componente/Unidade
+   - Sino de notificacoes tem tab "+30 dias" (casos em processo ha mais de 30 dias)
+   - Historico do membro mostra total de penas somatorias
+
+---
+
+#### WINDOWS SERVER (NSSM + IIS)
+
+**Passo 1 de 6: Fazer backup**
+
+```powershell
+# Backup da base de dados
+mongodump --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" `
+  --db disciplina_fdtl_prod --out C:\Backup\pre_update_%date:~0,4%%date:~5,2%%date:~8,2%
+
+# Backup dos ficheiros
+xcopy /E /I C:\Apps\Disciplina\backend\uploads C:\Backup\pre_update_%date:~0,4%%date:~5,2%%date:~8,2%\uploads
+```
+
+---
+
+**Passo 2 de 6: Buscar as alteracoes do GitHub**
+
+```powershell
+cd C:\Apps\Disciplina
+git pull origin main
+```
+
+---
+
+**Passo 3 de 6: Atualizar o Backend**
+
+```powershell
+cd C:\Apps\Disciplina\backend
 .\venv\Scripts\activate
 pip install -r requirements.txt
-nssm restart DisciplinaBackend
+```
 
-# Frontend
-cd ..\frontend
+---
+
+**Passo 4 de 6: Atualizar o .env do Backend (se necessario)**
+
+Abra `C:\Apps\Disciplina\backend\.env` com o Bloco de Notas.
+
+Se o MONGO_URL ainda nao tem credenciais, altere para:
+```
+MONGO_URL=mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin
+```
+
+Salve o ficheiro.
+
+---
+
+**Passo 5 de 6: Atualizar o Frontend**
+
+```powershell
+cd C:\Apps\Disciplina\frontend
 yarn install
 yarn build
-# Reiniciar o site no IIS Manager
+```
+
+---
+
+**Passo 6 de 6: Reiniciar e verificar**
+
+```powershell
+# Reiniciar o backend
+nssm restart DisciplinaBackend
+
+# Verificar status
+nssm status DisciplinaBackend
+# Deve mostrar: SERVICE_RUNNING
+```
+
+No IIS Manager, reinicie o site "Disciplina" (clique direito > Manage Website > Restart).
+
+Abra o navegador e teste o sistema.
+
+---
+
+#### Resumo rapido - Comandos de atualizacao (Linux)
+
+```bash
+# Executar tudo de uma vez (copie e cole no terminal):
+cd /home/disciplina/app && \
+mongodump --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" --db disciplina_fdtl_prod --out /backup/$(date +%Y%m%d)_pre_update && \
+git pull origin main && \
+cd backend && source venv/bin/activate && pip install -r requirements.txt && cd .. && \
+cd frontend && yarn install && yarn build && cd .. && \
+pm2 restart disciplina-backend && \
+sudo systemctl reload nginx && \
+echo "=== ATUALIZACAO CONCLUIDA ==="
+```
+
+---
+
+#### Se algo correr mal (rollback)
+
+```bash
+# Restaurar o backup da base de dados
+mongorestore --uri="mongodb://admtl:%40justica%23@localhost:27017/?authSource=admin" \
+  --db disciplina_fdtl_prod --drop /backup/YYYYMMDD_pre_update/disciplina_fdtl_prod
+
+# Restaurar ficheiros
+cp -r /backup/YYYYMMDD_pre_update/uploads /home/disciplina/app/backend/uploads
+
+# Reverter o codigo para a versao anterior
+cd /home/disciplina/app
+git log --oneline -10   # Ver os ultimos commits
+git checkout <commit_hash_anterior>
+
+# Reiniciar
+pm2 restart disciplina-backend
+sudo systemctl reload nginx
 ```
 
 ---
